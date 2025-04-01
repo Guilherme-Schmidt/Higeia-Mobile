@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-import FontAwesome5 from 'react-native-vector-icons/FontAwesome5'; // <- import correto!
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
@@ -10,28 +9,29 @@ const LoginScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.post('http://10.0.2.2:8000/api/login', {
-        email,
-        password,
-      });
-      const { access_token } = response.data;
-      await AsyncStorage.setItem('access_token', access_token);
-      navigation.replace('ListarProdutos');
-    } catch (error) {
-      console.error('Login failed', error);
-      alert('Usuário ou senha inválidos');
-    } finally {
-      setLoading(false);
-    }
-  };
+  setLoading(true);
+  try {
+    const response = await axios.post('http://10.0.2.2:8000/api/login', {
+      email,
+      password,
+    });
+    const { access_token } = response.data;
+    await AsyncStorage.setItem('access_token', access_token);
+
+    // Correção: Navegar para "Home", que contém o DrawerNavigator
+    navigation.replace('Home');
+  } catch (error) {
+    console.error('Login failed', error);
+    alert('Usuário ou senha inválidos');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <View style={styles.container}>
       <View style={styles.card}>
-      <FontAwesome5  name="paw" size={50} color="#4F46E5" style={styles.icon} />
-      <Text style={styles.title}>Higeia Login</Text>
+        <Text style={styles.title}>Higeia Login</Text>
         <TextInput
           value={email}
           onChangeText={setEmail}
@@ -75,10 +75,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
     elevation: 6,
-    alignItems: 'center', // Centraliza tudo no card
-  },
-  icon: {
-    marginBottom: 15,
+    alignItems: 'center',
   },
   title: {
     fontSize: 26,

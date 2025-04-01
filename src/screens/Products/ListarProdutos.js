@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, SafeAreaView, StyleSheet, ActivityIndicator, Alert, StatusBar, TextInput, TouchableOpacity } from 'react-native';
-import api from '../api/api';
+import api from '../../api/api';
 
 export default function ListarProdutos() {
   const [products, setProducts] = useState([]);
@@ -48,10 +48,6 @@ export default function ListarProdutos() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#4e9bde" barStyle="light-content" />
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Lista de Produtos</Text>
-      </View>
-      
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
