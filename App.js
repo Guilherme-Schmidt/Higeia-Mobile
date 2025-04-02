@@ -24,13 +24,11 @@ function ProdutosNavigator() {
   );
 }
 
-// 📌 Menu Lateral Customizado
 function CustomDrawerContent(props) {
   const [menuExpandido, setMenuExpandido] = useState(true);
 
   return (
     <DrawerContentScrollView {...props} style={{ backgroundColor: '#121212' }}>
-      {/* Toggle para expandir/retrair menu */}
       <View style={{ flexDirection: 'row', alignItems: 'center', padding: 10 }}>
         <Text style={{ color: '#fff', fontWeight: 'bold', flex: 1 }}>Menu Expandido?</Text>
         <Switch
@@ -40,7 +38,6 @@ function CustomDrawerContent(props) {
         />
       </View>
 
-      {/* Seção Home */}
       <DrawerItem
         label="Home"
         labelStyle={{ color: '#fff' }}
