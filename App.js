@@ -54,10 +54,10 @@ function CustomDrawerContent(props) {
         onPress={() => props.navigation.navigate('Produtos')}
       />
       <DrawerItem
-        label="Entradas / Compras"
+        label="Criar Produtos"
         labelStyle={{ color: '#fff' }}
         icon={() => <Icon name="list-alt" size={20} color="#0f0" />}
-        onPress={() => {}}
+        onPress={() => props.navigation.navigate('Criar Produto')}
         right={() => <Badge size={20} style={{ backgroundColor: '#0f0' }}>5</Badge>}
       />
       <DrawerItem
@@ -87,11 +87,11 @@ function CustomDrawerContent(props) {
   );
 }
 
-// 📌 Drawer Navigator
 function DrawerNavigator() {
   return (
     <Drawer.Navigator drawerContent={(props) => <CustomDrawerContent {...props} />}>
       <Drawer.Screen name="Produtos" component={ProdutosNavigator} />
+      <Drawer.Screen name="Criar Produto" component={CadastrarProduto} />
     </Drawer.Navigator>
   );
 }
