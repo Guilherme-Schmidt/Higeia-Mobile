@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, SafeAreaView, StyleSheet, ActivityIndicator, Alert, StatusBar, TextInput, TouchableOpacity } from 'react-native';
 import api from '../../api/api';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 export default function ListarProdutos() {
   const [products, setProducts] = useState([]);
@@ -15,7 +16,6 @@ export default function ListarProdutos() {
     setLoading(true);
     try {
       const response = await api.get('/pharmacy/product', { params: { query } });
-      console.log('Resposta da API:', response.data);
 
       if (response.data.items) {
         setProducts(response.data.items);
@@ -40,7 +40,7 @@ export default function ListarProdutos() {
     return (
       <View style={styles.loading}>
         <ActivityIndicator size="large" color="#4e9bde" />
-        <Text style={{marginTop:8,fontSize:16}}>Carregando produtos...</Text>
+        <Text style={{ marginTop: 8, fontSize: 16 }}>Carregando produtos...</Text>
       </View>
     );
   }
@@ -48,117 +48,115 @@ export default function ListarProdutos() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#4e9bde" barStyle="light-content" />
+      
+      {/* Campo de busca */}
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Buscar produto pelo nome"
+          placeholder="Buscar produto..."
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
         <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-          <Text style={{ color: '#fff', fontWeight: 'bold' }}>Buscar</Text>
+          <Ionicons name="search" size={20} color="#fff" />
         </TouchableOpacity>
       </View>
 
+      {/* Lista de produtos */}
       <FlatList
         data={products}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
-          <View
-            style={[
-              styles.card,
-              item.amount < 200 && styles.lowStockCard,  // Aplica um estilo diferente se a quantidade for menor que 200
-            ]}
-          >
-            <Text style={styles.name}>{item.name}</Text>
+          <View style={[styles.card, item.amount < 200 && styles.lowStockCard]}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.name}>{item.name}</Text>
+              {item.amount < 200 && <Text style={styles.badge}>Estoque Baixo</Text>}
+            </View>
             <Text style={styles.details}>Quantidade: {item.amount}</Text>
             <Text style={styles.details}>Código de barras: {item.bar_code}</Text>
           </View>
         )}
         ListEmptyComponent={<Text style={styles.empty}>Nenhum produto encontrado.</Text>}
-        contentContainerStyle={{ padding: 16 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}
       />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  // (mantém o seu style anterior e adiciona essas novas partes)
-  searchContainer: {
-    flexDirection: 'row',
-    margin: 16,
-    alignItems: 'center',
-  },
-  searchInput: {
-    flex: 1,
-    height: 40,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    marginRight: 8,
-  },
-  searchButton: {
-    backgroundColor: '#008000',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
   container: {
     flex: 1,
-    backgroundColor: '#f6f9fc',
+    backgroundColor: '#c2c2c2',
   },
   loading: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  header: {
-    backgroundColor: '#008000',
-    paddingVertical: 16,            // diminui de 24 para 16
-    paddingHorizontal: 16,
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
-    elevation: 3,
+  searchContainer: {
+    flexDirection: 'row',
+    margin: 16,
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    alignItems: 'center',
+    paddingHorizontal: 12,
   },
-  headerTitle: {
-    color: '#fff',
-    fontSize: 20,                   // diminui de 24 para 20
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginTop: 20,                   // diminui de 20 para 8
-    marginBottom: 4,
+  searchInput: {
+    flex: 1,
+    height: 40,
+    paddingHorizontal: 0,
+  },
+  searchButton: {
+    backgroundColor: '#008000',
+    padding: 10,
+    borderRadius: 6,
+    marginLeft:5,
   },
   card: {
-    padding: 12,                    // diminui de 18 para 12
-    marginBottom: 10,               // diminui de 16 para 10
-    marginHorizontal: 10,           // diminui de 12 para 10
-    borderRadius: 10,               // diminui de 14 para 10
+    padding: 14,
+    marginVertical: 8,
     backgroundColor: '#fff',
+    borderRadius: 10,
     elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowRadius: 4,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  badge: {
+    backgroundColor: '#ff4d4d',
+    color: '#fff',
+    fontSize: 12,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    fontWeight: 'bold',
   },
   lowStockCard: {
-    backgroundColor: '#ffdddd', // Cor para destacar quando o estoque estiver baixo
+    borderLeftWidth: 4,
+    borderLeftColor: '#ff4d4d',
   },
   name: {
-    fontSize: 16,                   // diminui de 20 para 16
+    fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 4,
     color: '#333',
   },
   details: {
-    fontSize: 13,                   // diminui de 15 para 13
+    fontSize: 14,
     color: '#555',
-    marginBottom: 1,
+    marginTop: 2,
   },
   empty: {
-    marginTop: 30,                  // um pouco menor
+    marginTop: 30,
     textAlign: 'center',
     color: '#777',
-    fontSize: 14,                   // menor
+    fontSize: 14,
   },
 });
