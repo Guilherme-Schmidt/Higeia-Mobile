@@ -1,151 +1,119 @@
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
   FlatList,
-  StyleSheet,
   ActivityIndicator,
-  Alert,
-  SafeAreaView,
-  StatusBar,
+  StyleSheet,
 } from 'react-native';
 import api from '../../api/api';
 
-export default function ListarEstoqueBaixo() {
+export default function ListLowStock() {
   const [produtos, setProdutos] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  const carregarDados = async () => {
-    setLoading(true);
-    try {
-      const res = await api.get('/pharmacy/stock/low-list');
-      if (Array.isArray(res.data)) {
-        setProdutos(res.data);
-      } else {
-        console.warn('Resposta inesperada da API:', res.data);
-        setProdutos([]);
-      }
-
-      setProdutos(res.data); // <--- GARANTA QUE RES.DATA É O ARRAY DIRETO
-      setLoading(false);
-    } catch (error) {
-      console.error('Erro ao carregar produtos:', error);
-      Alert.alert('Erro', 'Falha ao carregar o estoque baixo.');
-      setLoading(false);
-    }
-  };
+  const [pagina, setPagina] = useState(1);
+  const [carregando, setCarregando] = useState(false);
+  const [temMais, setTemMais] = useState(true);
 
   useEffect(() => {
-    carregarDados();
-  }, []);
-  const renderProduto = ({item}) => {
-    if (!item) return null;
+    carregarProdutos(1); // começa pela página 1
+  }, [carregarProdutos]);
 
-    return (
-      <View style={styles.card}>
-        <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.details}>Qtd atual: {item.amount}</Text>
-      </View>
-    );
-  };
+  const carregarProdutos = useCallback(async (paginaCarregar = 1) => {
+    if (carregando || !temMais) return;
 
-  if (loading) {
-    return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#0f0" />
-        <Text style={styles.loadingText}>Carregando estoque...</Text>
-      </View>
-    );
-  }
+    setCarregando(true);
 
-  console.log('Produtos carregados:', JSON.stringify(produtos, null, 2));
+    try {
+      const response = await api.get('/pharmacy/stock/low-list', {
+        params: { page: paginaCarregar },
+      });
+
+      const novosProdutos = response.data.data || [];
+      const ultimaPagina = response.data.last_page || 1;
+
+      setProdutos((prev) => {
+        const idsExistentes = new Set(prev.map((p) => p.id));
+        const novosUnicos = novosProdutos.filter((p) => !idsExistentes.has(p.id));
+        return [...prev, ...novosUnicos];
+      });
+
+      setPagina(paginaCarregar + 1);
+      setTemMais(paginaCarregar < ultimaPagina);
+    } catch (error) {
+      console.error('Erro ao buscar estoque baixo:', error);
+    } finally {
+      setCarregando(false);
+    }
+  }, [carregando, temMais]);
+
+  const renderItem = ({ item }) => (
+    <View style={styles.card}>
+      <Text style={styles.nome}>{item.name}</Text>
+      <Text style={styles.qtd}>Qtd: {item.amount}</Text>
+      <Text style={styles.falta}>Faltam: {item.missing}</Text>
+    </View>
+  );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor="#000" barStyle="light-content" />
-      <Text style={styles.title}>Estoque Baixo</Text>
+    <View style={styles.container}>
+      <Text style={styles.titulo}>Estoque Baixo</Text>
+
       <FlatList
         data={produtos}
-        keyExtractor={(item, index) =>
-          item?.id ? item.id.toString() : index.toString()
-        }
-        renderItem={renderProduto}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={renderItem}
+        onEndReached={() => carregarProdutos(pagina)}
+        onEndReachedThreshold={0.2}
         ListEmptyComponent={
-          <Text style={styles.empty}>Nenhum item com estoque baixo.</Text>
+          !carregando && (
+            <Text style={styles.vazio}>Nenhum item com estoque baixo.</Text>
+          )
         }
-        contentContainerStyle={{paddingBottom: 20}}
+        ListFooterComponent={
+          carregando && <ActivityIndicator size="small" color="#0f0" />
+        }
+        contentContainerStyle={{ paddingBottom: 20 }}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
-// ... (seu styles)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
-    padding: 16,
+    backgroundColor: '#000',
+    paddingHorizontal: 16,
   },
-  loading: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#121212',
-  },
-  loadingText: {
-    marginTop: 8,
-    fontSize: 16,
-    color: '#ccc',
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
+  titulo: {
     color: '#0f0',
-    marginBottom: 12,
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginVertical: 20,
   },
   card: {
-    backgroundColor: '#1e1e1e',
-    borderRadius: 10,
-    padding: 14,
+    backgroundColor: '#111',
+    padding: 16,
+    borderRadius: 8,
     marginBottom: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#ffcc00',
+    borderColor: '#333',
+    borderWidth: 1,
   },
-  cardOut: {
-    borderLeftColor: '#ff4444',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: 'bold',
+  nome: {
     color: '#fff',
-  },
-  badge: {
-    backgroundColor: '#ffcc00',
-    color: '#000',
-    fontSize: 12,
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-    borderRadius: 10,
+    fontSize: 18,
     fontWeight: 'bold',
   },
-  badgeOut: {
-    backgroundColor: '#ff4444',
-    color: '#fff',
-  },
-  details: {
-    fontSize: 14,
+  qtd: {
     color: '#ccc',
-    marginTop: 2,
+    fontSize: 14,
   },
-  empty: {
-    marginTop: 30,
+  falta: {
+    color: '#f55',
+    fontSize: 14,
+  },
+  vazio: {
     textAlign: 'center',
     color: '#888',
-    fontSize: 14,
+    marginTop: 20,
   },
 });
