@@ -9,24 +9,36 @@ const LoginScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-  setLoading(true);
-  try {
-    const response = await axios.post('http://10.0.2.2:8000/api/login', {
-      email,
-      password,
-    });
-    const { access_token } = response.data;
-    await AsyncStorage.setItem('access_token', access_token);
+    setLoading(true);
+    try {
+      const response = await axios.post('http://10.0.2.2:8000/api/login', {
+        email,
+        password,
+      });
+      const { access_token } = response.data;
+      await AsyncStorage.setItem('access_token', access_token);
+      navigation.replace('Home');
+    } catch (error) {
+      setLoading(false);
+  
 
-    // Correção: Navegar para "Home", que contém o DrawerNavigator
-    navigation.replace('Home');
-  } catch (error) {
-    console.error('Login failed', error);
-    alert('Usuário ou senha inválidos');
-  } finally {
-    setLoading(false);
-  }
-};
+      if (error.response) {
+ 
+        console.error('Error response:', error.response.data);
+        alert(`Erro: ${error.response.data.message || 'Falha na autenticação'}`);
+      } else if (error.request) {
+        
+        console.error('Error request:', error.request);
+        alert('Erro de rede. Tente novamente mais tarde.');
+      } else {
+        console.error('General error:', error.message);
+        alert('Ocorreu um erro inesperado. Tente novamente.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+  
 
   return (
     <View style={styles.container}>

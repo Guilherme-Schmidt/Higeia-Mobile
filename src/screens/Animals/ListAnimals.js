@@ -1,117 +1,103 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  Switch,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import { View, Text, FlatList, Switch, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import api from '../../api/api';
 
 export default function ListAnimals() {
   const [animais, setAnimais] = useState([]);
   const [carregando, setCarregando] = useState(true);
+  const [processando, setProcessando] = useState(null);
 
-  // Função para carregar os animais
   const carregarAnimais = async () => {
     try {
       const response = await api.get('/reg/animal');
-      console.log(response.data); // Verifique a estrutura da resposta
-      if (response.data.items) {
-        setAnimais(response.data.items); // Acesse os animais dentro da chave 'items'
-      }
+      setAnimais(response.data.items || response.data || []);
     } catch (error) {
       Alert.alert('Erro', 'Não foi possível carregar os animais.');
-      console.error('Erro ao buscar animais:', error);
+      console.error('Erro:', error.response?.data || error);
     } finally {
-      setCarregando(false); // Finaliza o carregamento
+      setCarregando(false);
     }
   };
 
-  // Função para alterar o status de internação
-  const alterarStatusInternacao = async (animalId, internado) => {
+  const toggleInternacao = async (animalId, deveInternar) => {
+    setProcessando(animalId);
+    
     try {
-      console.log('Enviando dados para a API:', { internado });
-
-      const response = await api.put(
-        `/clinic/hospitalization/${animalId}/status`,
-        {
-          internado: internado, // Envia o valor 'internado' como booleano (true ou false)
-        },
-      );
-
-      console.log('Resposta da API:', response.data);
-
-      if (response.status === 200) {
-        // Atualiza o estado local se a alteração foi bem-sucedida
-        setAnimais(prevAnimais =>
-          prevAnimais.map(animal =>
-            animal.id === animalId
-              ? {
-                  ...animal,
-                  hospitalization: {
-                    ...animal.hospitalization,
-                    discharged: internado ? 0 : 1, // 0 = internado, 1 = não internado
-                  },
-                }
-              : animal,
-          ),
-        );
+      if (deveInternar) {
+        // Internar animal
+        const response = await api.post('/clinic/hospitalization', {
+          animal_id: animalId,
+          weight: 0, // Valor inicial
+          temperature: 0, // Valor inicial
+          blood_pressure: '',
+          observations: ''
+        });
+        
+        // Atualiza estado local
+        setAnimais(prev => prev.map(animal => 
+          animal.id === animalId 
+            ? { ...animal, hospitalization: response.data } 
+            : animal
+        ));
       } else {
-        Alert.alert('Erro', 'Ocorreu um erro ao alterar o status.');
+        // Dar alta
+        await api.put(`/clinic/hospitalization/animal/${animalId}/discharge`, {
+          discharged: true
+        });
+        
+        // Atualiza estado local
+        setAnimais(prev => prev.map(animal => 
+          animal.id === animalId 
+            ? { ...animal, hospitalization: null } 
+            : animal
+        ));
       }
     } catch (error) {
-      console.error(
-        'Erro ao atualizar internação:',
-        error.response?.data || error.message,
-      );
-      Alert.alert('Erro', 'Não foi possível alterar o status de internação.');
+      console.error('Erro:', error.response?.data || error);
+      Alert.alert('Erro', error.response?.data?.message || 'Operação falhou');
+    } finally {
+      setProcessando(null);
     }
   };
 
-  useEffect(() => {
-    carregarAnimais();
-  }, []);
+  useEffect(() => { carregarAnimais(); }, []);
 
-  // Função para renderizar cada item da lista de animais
   const renderItem = ({ item }) => {
-    const internado =
-      item.hospitalization && item.hospitalization.discharged === 0;
-
+    const estaInternado = item.hospitalization && !item.hospitalization.discharged;
+    
     return (
       <View style={styles.card}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.nome}>{item.name}</Text>
-          <Text style={styles.info}>
-            Espécie: {item.species} - Raça: {item.breed}
-          </Text>
+          <Text style={styles.nome}>{item.name || 'Sem nome'}</Text>
+          <Text style={styles.info}>Espécie: {item.species} - Raça: {item.breed}</Text>
+          {estaInternado && <Text style={styles.status}>Status: Internado</Text>}
         </View>
-        <Switch
-          value={internado}
-          onValueChange={() => alterarStatusInternacao(item.id, !internado)} // Passa o valor oposto para atualizar
-          thumbColor={internado ? '#0f0' : '#888'}
-        />
+        
+        {processando === item.id ? (
+          <ActivityIndicator size="small" color="#4CAF50" />
+        ) : (
+          <Switch
+            value={estaInternado}
+            onValueChange={(value) => toggleInternacao(item.id, value)}
+            thumbColor={estaInternado ? '#4CAF50' : '#f4f3f4'}
+          />
+        )}
       </View>
     );
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.titulo}>Todos os Animais</Text>
-
+      <Text style={styles.titulo}>Controle de Internação</Text>
+      
       {carregando ? (
-        <ActivityIndicator size="large" color="#0f0" />
+        <ActivityIndicator size="large" color="#4CAF50" />
       ) : (
         <FlatList
           data={animais}
-          keyExtractor={item => item.id.toString()}
           renderItem={renderItem}
-          contentContainerStyle={{ paddingBottom: 20 }}
-          ListEmptyComponent={
-            <Text style={styles.vazio}>Nenhum animal encontrado.</Text>
-          }
+          keyExtractor={item => item.id.toString()}
+          ListEmptyComponent={<Text style={styles.vazio}>Nenhum animal</Text>}
         />
       )}
     </View>
@@ -119,39 +105,19 @@ export default function ListAnimals() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
-    paddingHorizontal: 16,
-  },
-  titulo: {
-    color: '#0f0',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginVertical: 20,
-  },
+  container: { flex: 1, padding: 16, backgroundColor: '#f5f5f5' },
+  titulo: { fontSize: 22, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
   card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#111',
+    backgroundColor: '#fff',
     padding: 16,
     borderRadius: 8,
     marginBottom: 12,
-    borderColor: '#333',
-    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    elevation: 2
   },
-  nome: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  info: {
-    color: '#ccc',
-    fontSize: 14,
-  },
-  vazio: {
-    textAlign: 'center',
-    color: '#888',
-    marginTop: 20,
-  },
+  nome: { fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
+  info: { fontSize: 14, color: '#666' },
+  status: { color: '#4CAF50', fontWeight: 'bold', marginTop: 4 },
+  vazio: { textAlign: 'center', marginTop: 20, color: '#888' }
 });

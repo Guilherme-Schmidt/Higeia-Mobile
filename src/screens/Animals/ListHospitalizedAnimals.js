@@ -1,98 +1,112 @@
-import React, {useEffect, useState} from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   FlatList,
   ActivityIndicator,
   StyleSheet,
-  Switch,
-  Alert,
+  TouchableOpacity,
+  RefreshControl
 } from 'react-native';
 import api from '../../api/api';
 
 export default function ListHospitalizedAnimals() {
   const [animais, setAnimais] = useState([]);
   const [carregando, setCarregando] = useState(true);
-  const [alterando, setAlterando] = useState(null); // ID do item em atualização
+  const [erro, setErro] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const carregarAnimais = async () => {
+    try {
+      setErro(null);
+      const response = await api.get('/clinic/hospitalization');
+      
+      if (response.data && response.data.data) {
+        setAnimais(response.data.data);
+      } else {
+        setAnimais([]);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar animais:', error.response?.data || error);
+      setErro(error.response?.data?.error || 'Falha ao carregar animais internados');
+    } finally {
+      setCarregando(false);
+      setRefreshing(false);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    carregarAnimais();
+  };
 
   useEffect(() => {
     carregarAnimais();
   }, []);
 
-  const carregarAnimais = async () => {
-    try {
-      const response = await api.get('clinic/hospitalization/hospitalized');
-      console.log('Animais internados:', response.data.hospitalizations); // Verifique o formato dos dados
-      setAnimais(response.data.hospitalizations || []);
-    } catch (error) {
-      console.error('Erro ao buscar animais internados:', error);
-    } finally {
-      setCarregando(false);
-    }
-  };
-
-  const darAlta = async id => {
-    setAlterando(id);
-    try {
-      await api.put(`clinic/hospitalization/${id}/status`, {
-        internado: false, // Definindo "false" para dar alta
-      }); 
-      Alert.alert('Sucesso', 'O animal teve alta com sucesso!');
-      // Atualiza a lista de animais após dar alta
-      setAnimais(prev =>
-        prev.map(item =>
-          item.id === id ? {...item, discharged: true} : item
-        ),
-      );
-    } catch (error) {
-      Alert.alert('Erro', 'Não foi possível dar alta no animal.');
-      console.error('Erro ao dar alta:', error);
-    } finally {
-      setAlterando(null);
-    }
-  };
-
-  const renderItem = ({item}) => (
-    <View style={styles.card}>
-      <View style={styles.header}>
-        <Text style={styles.nome}>
-          {item.animal?.name || 'Animal sem nome'}
-        </Text>
-        <Switch
-          value={!item.discharged}
-          onValueChange={val => {
-            if (!val) darAlta(item.id);
-          }}
-          thumbColor={!item.discharged ? '#0f0' : '#888'}
-          trackColor={{false: '#555', true: '#0f05'}}
-          disabled={alterando === item.id}
-        />
+  if (carregando && !refreshing) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#4CAF50" />
       </View>
-      <Text style={styles.info}>Espécie: {item.animal?.species}</Text>
-      <Text style={styles.info}>Raça: {item.animal?.breed}</Text>
-      <Text style={styles.info}>Peso: {item.weight ?? 'N/A'} kg</Text>
-      <Text style={styles.info}>Temp: {item.temperature ?? 'N/A'} ºC</Text>
-      <Text style={styles.info}>Pressão: {item.blood_pressure ?? 'N/A'}</Text>
-    </View>
-  );
+    );
+  }
+
+  if (erro) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.erroTexto}>{erro}</Text>
+        <TouchableOpacity 
+          style={styles.botaoTentarNovamente}
+          onPress={carregarAnimais}
+        >
+          <Text style={styles.botaoTexto}>Tentar Novamente</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (animais.length === 0) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.textoVazio}>Nenhum animal internado no momento</Text>
+        <TouchableOpacity 
+          style={styles.botaoAtualizar}
+          onPress={carregarAnimais}
+        >
+          <Text style={styles.botaoTexto}>Atualizar</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <Text style={styles.titulo}>Animais Internados</Text>
-
-      {carregando ? (
-        <ActivityIndicator size="large" color="#0f0" />
-      ) : (
-        <FlatList
-          data={animais}
-          keyExtractor={item => item.id.toString()}
-          renderItem={renderItem}
-          ListEmptyComponent={
-            <Text style={styles.vazio}>Nenhum animal internado.</Text>
-          }
-          contentContainerStyle={{paddingBottom: 20}}
-        />
-      )}
+      
+      <FlatList
+        data={animais}
+        keyExtractor={item => item.id.toString()}
+        renderItem={({ item }) => (
+          <View style={styles.card}>
+            <Text style={styles.nomeAnimal}>{item.animal?.name || 'Animal sem nome'}</Text>
+            <Text>Espécie: {item.animal?.species || 'Não informado'}</Text>
+            <Text>Raça: {item.animal?.breed || 'Não informada'}</Text>
+            <Text>Peso: {item.weight || 'N/A'} kg</Text>
+            <Text>Temperatura: {item.temperature || 'N/A'} °C</Text>
+            <Text>Pressão: {item.blood_pressure || 'N/A'}</Text>
+            <Text>Entrada: {new Date(item.entry_date).toLocaleDateString()}</Text>
+          </View>
+        )}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#4CAF50']}
+          />
+        }
+        contentContainerStyle={animais.length === 0 && styles.listaVazia}
+      />
     </View>
   );
 }
@@ -100,40 +114,64 @@ export default function ListHospitalizedAnimals() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
-    paddingHorizontal: 16,
+    backgroundColor: '#F5F5F5',
+    padding: 16,
   },
   titulo: {
-    color: '#0f0',
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
-    marginVertical: 20,
+    marginBottom: 20,
+    textAlign: 'center',
+    color: '#333',
   },
   card: {
-    backgroundColor: '#111',
+    backgroundColor: '#FFF',
     padding: 16,
     borderRadius: 8,
     marginBottom: 12,
-    borderColor: '#333',
-    borderWidth: 1,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  nome: {
-    color: '#fff',
+  nomeAnimal: {
     fontSize: 18,
     fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#333',
   },
-  info: {
-    color: '#ccc',
-    fontSize: 14,
-  },
-  vazio: {
+  erroTexto: {
+    color: '#D32F2F',
+    fontSize: 16,
     textAlign: 'center',
-    color: '#888',
-    marginTop: 20,
+    marginBottom: 20,
+  },
+  textoVazio: {
+    fontSize: 16,
+    textAlign: 'center',
+    color: '#666',
+    marginBottom: 20,
+  },
+  botaoTentarNovamente: {
+    backgroundColor: '#D32F2F',
+    padding: 12,
+    borderRadius: 6,
+    alignSelf: 'center',
+  },
+  botaoAtualizar: {
+    backgroundColor: '#4CAF50',
+    padding: 12,
+    borderRadius: 6,
+    alignSelf: 'center',
+  },
+  botaoTexto: {
+    color: '#FFF',
+    fontWeight: 'bold',
+  },
+  listaVazia: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

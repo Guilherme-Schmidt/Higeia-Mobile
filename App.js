@@ -22,21 +22,20 @@ import DashboardStock from './src/screens/Stock/DashboardStock';
 import ListLowStock from './src/screens/Stock/ListLowStock';
 import ListHospitalizedAnimals from './src/screens/Animals/ListHospitalizedAnimals';
 import ListAllAnimals from './src/screens/Animals/ListAnimals';
+import AppointmentScreen from './src/screens/Appointments/AppointmentScreen';
+import NovoAgendamentoScreen from './src/screens/Appointments/NovoAgendamentoScreen';
 
 const Stack = createStackNavigator();
 const Drawer = createDrawerNavigator();
 
-// Cores e ícones para reutilização
 const ICON_COLOR = '#0f0';
 const ICON_SIZE = 20;
 const HEADER_STYLE = { color: '#fff', fontWeight: 'bold' };
 
-// Função para renderizar o ícone
 const DrawerIcon = name => (
   <Icon name={name} size={ICON_SIZE} color={ICON_COLOR} />
 );
 
-// 📌 Stack Navigator para Produtos
 const ProdutosNavigator = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="ListarProdutos" component={ListarProdutos} />
@@ -48,21 +47,15 @@ const ProdutosNavigator = () => (
   </Stack.Navigator>
 );
 
-// 📌 Stack Navigator para Clínica
 const ClinicaNavigator = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
-    <Stack.Screen
-      name="ListHospitalizedAnimals"
-      component={ListHospitalizedAnimals}
-    />
-    <Stack.Screen
-      name="ListAllAnimals"
-      component={ListAllAnimals}
-    />
+    <Stack.Screen name="Appointments" component={AppointmentScreen} />
+    <Stack.Screen name="Novo Agendamento" component={NovoAgendamentoScreen} />
+    <Stack.Screen name="ListHospitalizedAnimals" component={ListHospitalizedAnimals} />
+    <Stack.Screen name="ListAllAnimals" component={ListAllAnimals} />
   </Stack.Navigator>
 );
 
-// 📌 Drawer Customizado
 const CustomDrawerContent = props => {
   const [menuExpandido, setMenuExpandido] = useState(true);
 
@@ -77,7 +70,6 @@ const CustomDrawerContent = props => {
         />
       </View>
 
-      {/* Home */}
       <DrawerItem
         label="Home"
         labelStyle={{ color: '#fff' }}
@@ -85,38 +77,27 @@ const CustomDrawerContent = props => {
         onPress={() => props.navigation.navigate('Home')}
       />
 
-      {/* Seção Farmácia */}
-      <Text style={{ ...HEADER_STYLE, marginLeft: 15, marginTop: 10 }}>
-        Farmácia
-      </Text>
+      <Text style={{ ...HEADER_STYLE, marginLeft: 15, marginTop: 10 }}>Farmácia</Text>
       {menuExpandido && (
         <>
           <DrawerItem
             label="Estoque"
             labelStyle={{ color: '#fff' }}
             icon={() => DrawerIcon('file-medical')}
-            onPress={() =>
-              props.navigation.navigate('Produtos', { screen: 'DashboardStock' })
-            }
+            onPress={() => props.navigation.navigate('Produtos', { screen: 'DashboardStock' })}
           />
           <DrawerItem
             label="Produtos"
             labelStyle={{ color: '#fff' }}
             icon={() => DrawerIcon('file-medical')}
-            onPress={() =>
-              props.navigation.navigate('Produtos', { screen: 'ListarProdutos' })
-            }
+            onPress={() => props.navigation.navigate('Produtos', { screen: 'ListarProdutos' })}
           />
           <DrawerItem
             label="Criar Produtos"
             labelStyle={{ color: '#fff' }}
             icon={() => DrawerIcon('list-alt')}
             onPress={() => props.navigation.navigate('Criar Produto')}
-            right={() => (
-              <Badge size={20} style={{ backgroundColor: ICON_COLOR }}>
-                5
-              </Badge>
-            )}
+            right={() => <Badge size={20} style={{ backgroundColor: ICON_COLOR }}>5</Badge>}
           />
           <DrawerItem
             label="Entrada de Produtos"
@@ -128,56 +109,39 @@ const CustomDrawerContent = props => {
             label="Retiradas"
             labelStyle={{ color: '#fff' }}
             icon={() => DrawerIcon('list')}
-            onPress={() => {}}
-            right={() => (
-              <Badge size={20} style={{ backgroundColor: ICON_COLOR }}>
-                5
-              </Badge>
-            )}
+            onPress={() => alert('Tela de retiradas ainda não implementada')}
+            right={() => <Badge size={20} style={{ backgroundColor: ICON_COLOR }}>5</Badge>}
           />
           <DrawerItem
             label="Pedidos"
             labelStyle={{ color: '#fff' }}
             icon={() => DrawerIcon('clipboard-list')}
-            onPress={() => {}}
-            right={() => (
-              <Badge size={20} style={{ backgroundColor: ICON_COLOR }}>
-                5
-              </Badge>
-            )}
+            onPress={() => alert('Tela de pedidos ainda não implementada')}
+            right={() => <Badge size={20} style={{ backgroundColor: ICON_COLOR }}>5</Badge>}
           />
         </>
       )}
 
-      {/* Seção Clínica */}
-      <Text style={{ ...HEADER_STYLE, marginLeft: 15, marginTop: 10 }}>
-        Clínica
-      </Text>
+      <Text style={{ ...HEADER_STYLE, marginLeft: 15, marginTop: 10 }}>Clínica</Text>
       {menuExpandido && (
         <>
           <DrawerItem
             label="Agendamentos"
             labelStyle={{ color: '#fff' }}
             icon={() => DrawerIcon('calendar-alt')}
-            onPress={() => {}}
+            onPress={() => props.navigation.navigate('Clínica', { screen: 'Appointments' })}
           />
           <DrawerItem
             label="Internações"
             labelStyle={{ color: '#fff' }}
             icon={() => DrawerIcon('hospital')}
-            onPress={() =>
-              props.navigation.navigate('Clínica', {
-                screen: 'ListHospitalizedAnimals',
-              })
-            }
+            onPress={() => props.navigation.navigate('Clínica', { screen: 'ListHospitalizedAnimals' })}
           />
           <DrawerItem
             label="Todos os Animais"
             labelStyle={{ color: '#fff' }}
             icon={() => DrawerIcon('paw')}
-            onPress={() =>
-              props.navigation.navigate('Clínica', { screen: 'ListAllAnimals' })
-            }
+            onPress={() => props.navigation.navigate('Clínica', { screen: 'ListAllAnimals' })}
           />
         </>
       )}
@@ -185,7 +149,6 @@ const CustomDrawerContent = props => {
   );
 };
 
-// 📌 Drawer Navigator
 const DrawerNavigator = () => (
   <Drawer.Navigator drawerContent={props => <CustomDrawerContent {...props} />}>
     <Drawer.Screen name="Produtos" component={ProdutosNavigator} />
@@ -195,7 +158,6 @@ const DrawerNavigator = () => (
   </Drawer.Navigator>
 );
 
-// 📌 Stack Principal
 const MainNavigator = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="Login" component={LoginScreen} />
@@ -203,7 +165,6 @@ const MainNavigator = () => (
   </Stack.Navigator>
 );
 
-// 📌 Aplicação Principal
 export default function App() {
   return (
     <NavigationContainer>
