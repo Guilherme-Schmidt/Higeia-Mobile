@@ -16,80 +16,66 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import api from '../../api/api';
 
 const AppointmentScreen = () => {
+  // Estados principais
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
-
-  // Separate state for date range picker
+  
+  // Estados para filtros de data
   const [showDateRangePicker, setShowDateRangePicker] = useState(false);
-  const [dateRangePickerField, setDateRangePickerField] = useState(null); // 'startDate' or 'endDate'
-
-  const [animalsList, setAnimalsList] = useState([]);
-  const [animalSearchTerm, setAnimalSearchTerm] = useState('');
-  const [showAnimalDropdown, setShowAnimalDropdown] = useState(false);
-
-  // --- Novos estados para Veterinários e Técnicos ---
-  const [veterinariansList, setVeterinariansList] = useState([]);
-  const [techniciansList, setTechniciansList] = useState([]);
-
-  // Estados para controlar o modal de seleção de equipe
-  const [showTeamSelectionModal, setShowTeamSelectionModal] = useState(false);
-  const [currentTeamType, setCurrentTeamType] = useState(''); // 'veterinario' ou 'tecnico'
-  const [selectedTeamMembers, setSelectedTeamMembers] = useState([]);
-
-  // Separate state for form date/time pickers
-  const [showFormDatePicker, setShowFormDatePicker] = useState(false);
-  const [formPickerMode, setFormPickerMode] = useState('date'); // 'date' or 'time'
-  const [formPickerField, setFormPickerField] = useState(null); // 'date' or 'hour'
-
+  const [dateRangePickerField, setDateRangePickerField] = useState(null);
   const [dateRange, setDateRange] = useState({
     startDate: new Date(),
     endDate: new Date(new Date().setDate(new Date().getDate() + 7))
   });
 
-  const [form, setForm] = useState({
-    date: new Date().toISOString().split('T')[0],
-    hour: '',
-    animal_id: '',
-    type_appointments: 'consulta',
-    description: '',
-    team: []
+  // Estados para animais
+  const [animalData, setAnimalData] = useState({
+    loading: false,
+    animals: [],
+    filteredAnimals: []
   });
+  const [showAnimalsDropdown, setShowAnimalsDropdown] = useState(false);
 
-  const fetchVeterinarians = async () => {
-    try {
-      // Ajuste sua rota API para buscar veterinários
-      const response = await api.get('/clinic/veterinarians');
-      // Suponha que sua API retorna um array de { id: '...', name: '...' }
-      setVeterinariansList(response.data.items || response.data || []);
-    } catch (error) {
-      console.error('Erro ao carregar veterinários:', error);
-      Alert.alert('Erro', 'Não foi possível carregar a lista de veterinários.');
-    }
-  };
+  // Estados para equipe
+  const [teamMembers, setTeamMembers] = useState({
+    employees: [],
+    students: []
+  });
+  const [loadingTeam, setLoadingTeam] = useState(false);
+  const [showTeamModal, setShowTeamModal] = useState(false);
+  const [currentTeamType, setCurrentTeamType] = useState('');
 
-  // Função para carregar técnicos
-  const fetchTechnicians = async () => {
-    try {
-      // Ajuste sua rota API para buscar técnicos
-      const response = await api.get('/clinic/technicians');
-      // Suponha que sua API retorna um array de { id: '...', name: '...' }
-      setTechniciansList(response.data.items || response.data || []);
-    } catch (error) {
-      console.error('Erro ao carregar técnicos:', error);
-      Alert.alert('Erro', 'Não foi possível carregar a lista de técnicos.');
-    }
-  };
+  // Estados para pickers de data/hora do formulário
+  const [showFormDatePicker, setShowFormDatePicker] = useState(false);
+  const [formPickerMode, setFormPickerMode] = useState('date');
+  const [formPickerField, setFormPickerField] = useState(null);
 
-
+  // Estados para filtros
   const [filters, setFilters] = useState({
     search: '',
     type: 'all'
   });
 
-  
+  // Estado do formulário
+  const [form, setForm] = useState({
+    date: new Date().toISOString().split('T')[0],
+    hour: '',
+    animal_id: '',
+    animalSearchTerm: '',
+    type_appointments: 'consulta',
+    description: '',
+    team: []
+  });
 
-  // Função para carregar agendamentos
+  // Carregar dados iniciais
+  useEffect(() => {
+    loadAppointments();
+    loadAnimals();
+    loadTeamMembers();
+  }, []);
+
+  // Carregar agendamentos
   const loadAppointments = async () => {
     try {
       setLoading(true);
@@ -98,9 +84,7 @@ const AppointmentScreen = () => {
       };
 
       const response = await api.get('/clinic/appointment', { params });
-      console.log('Dados completos recebidos:', response.data);
       setAppointments(response.data.items || []);
-
     } catch (error) {
       console.error('Erro ao carregar consultas:', error);
       Alert.alert('Erro', 'Não foi possível carregar os agendamentos');
@@ -109,40 +93,91 @@ const AppointmentScreen = () => {
     }
   };
 
-  useEffect(() => {
-    console.log('Buscando agendamentos entre:', {
-      start: dateRange.startDate.toISOString().split('T')[0],
-      end: dateRange.endDate.toISOString().split('T')[0]
-    });
-    loadAppointments();
-  }, [dateRange]);
-
-  // Agendar nova consulta
-  const scheduleAppointment = async () => {
-    if (!form.animal_id || !form.date || !form.hour) {
-      Alert.alert('Erro', 'Por favor, preencha todos os campos obrigatórios (Animal, Data, Horário)');
-      return;
-    }
+  // Carregar animais - Versão Corrigida
+  const loadAnimals = async () => {
     try {
-      await api.post('/clinic/appointment', form);
-      setModalVisible(false);
-      setForm({
-        date: new Date().toISOString().split('T')[0],
-        hour: '',
-        animal_id: '',
-        type_appointments: 'consulta',
-        description: '',
-        team: []
+      setAnimalData(prev => ({...prev, loading: true}));
+      
+      const response = await api.get('/reg/animal', {
+        params: {
+          page: 1,
+          size: 500
+        },
+        headers: {
+          'Authorization': 'Bearer seu_token_aqui',
+          'Content-Type': 'application/json'
+        }
       });
-      loadAppointments();
-      Alert.alert('Sucesso', 'Consulta agendada com sucesso!');
+
+      setAnimalData({
+        loading: false,
+        animals: response.data.items || [],
+        filteredAnimals: response.data.items || []
+      });
     } catch (error) {
-      console.error('Erro ao agendar:', error);
-      Alert.alert('Erro', error.response?.data?.message || 'Erro ao agendar consulta');
+      console.error('Erro ao carregar animais:', error);
+      setAnimalData(prev => ({...prev, loading: false}));
+      Alert.alert('Erro', 'Não foi possível carregar a lista de animais');
     }
   };
 
-  // Manipulador do DateTimePicker para o FORMULÁRIO
+  // Carregar membros da equipe
+  const loadTeamMembers = async () => {
+    try {
+      setLoadingTeam(true);
+      const response = await api.get('/reg/team/members', {
+        params: {
+          query: '',
+          page: 1,
+          size: 500
+        },
+        headers: {
+          'Authorization': 'Bearer seu_token_aqui',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      setTeamMembers({
+        employees: response.data.items.filter(m => m.member_type === 'Employee'),
+        students: response.data.items.filter(m => m.member_type === 'Student')
+      });
+    } catch (error) {
+      console.error('Erro ao carregar equipe:', error);
+      Alert.alert('Erro', 'Não foi possível carregar a equipe');
+    } finally {
+      setLoadingTeam(false);
+    }
+  };
+
+  // Filtrar animais - Versão Corrigida
+  const filterAnimals = (text) => {
+    setForm(prev => ({...prev, animalSearchTerm: text}));
+    
+    setAnimalData(prev => {
+      if (!text) {
+        return {...prev, filteredAnimals: prev.animals};
+      }
+      
+      const filtered = prev.animals.filter(animal =>
+        animal.name.toLowerCase().includes(text.toLowerCase()) ||
+        (animal.owner_name && animal.owner_name.toLowerCase().includes(text.toLowerCase()))
+      );
+      
+      return {...prev, filteredAnimals: filtered};
+    });
+  };
+
+  // Selecionar animal - Versão Corrigida
+  const selectAnimal = (animal) => {
+    setForm(prev => ({
+      ...prev,
+      animal_id: animal.id,
+      animalSearchTerm: `${animal.name} (${animal.owner_name || 'Sem dono'})`
+    }));
+    setShowAnimalsDropdown(false);
+  };
+
+  // Manipuladores de data/hora
   const handleFormDateChange = (event, selected) => {
     if (event.type === 'dismissed') {
       setShowFormDatePicker(false);
@@ -151,17 +186,16 @@ const AppointmentScreen = () => {
 
     if (selected) {
       if (formPickerField === 'date') {
-        setForm({ ...form, date: selected.toISOString().split('T')[0] });
+        setForm(prev => ({...prev, date: selected.toISOString().split('T')[0]}));
       } else if (formPickerField === 'hour') {
         const hours = selected.getHours().toString().padStart(2, '0');
         const minutes = selected.getMinutes().toString().padStart(2, '0');
-        setForm({ ...form, hour: `${hours}:${minutes}` });
+        setForm(prev => ({...prev, hour: `${hours}:${minutes}`}));
       }
     }
     setShowFormDatePicker(false);
   };
 
-  // Manipulador do DateTimePicker para o FILTRO DE DATAS
   const handleDateRangeChange = (event, selected) => {
     if (event.type === 'dismissed') {
       setShowDateRangePicker(false);
@@ -170,79 +204,173 @@ const AppointmentScreen = () => {
 
     if (selected) {
       if (dateRangePickerField === 'startDate') {
-        setDateRange({ ...dateRange, startDate: selected });
+        setDateRange(prev => ({...prev, startDate: selected}));
       } else if (dateRangePickerField === 'endDate') {
-        setDateRange({ ...dateRange, endDate: selected });
+        setDateRange(prev => ({...prev, endDate: selected}));
       }
     }
     setShowDateRangePicker(false);
   };
 
-  // Adicionar membro ao time - ajuste o ID conforme sua lógica
-  const addTeamMember = (memberType) => {
-    // Exemplo: gerar ID único ou escolher de lista real
-    const newId = (Math.random() * 100000).toFixed(0);
-    setForm({
-      ...form,
-      team: [...form.team, {
-        member_type: memberType,
-        member_id: newId
+  // Manipuladores de equipe
+  const openTeamModal = (type) => {
+    setCurrentTeamType(type);
+    setShowTeamModal(true);
+  };
+
+  const selectTeamMember = (member) => {
+    setForm(prev => ({
+      ...prev,
+      team: [...prev.team, {
+        member_type: member.member_type.toLowerCase(),
+        member_id: member.member_id,
+        name: member.name
       }]
+    }));
+    setShowTeamModal(false);
+  };
+
+  const removeTeamMember = (index) => {
+    setForm(prev => {
+      const newTeam = [...prev.team];
+      newTeam.splice(index, 1);
+      return {...prev, team: newTeam};
     });
   };
 
-  // Remover membro do time
-  const removeTeamMember = (index) => {
-    const newTeam = [...form.team];
-    newTeam.splice(index, 1);
-    setForm({ ...form, team: newTeam });
+  // Agendar consulta
+  const scheduleAppointment = async () => {
+    if (!form.animal_id || !form.date || !form.hour) {
+      Alert.alert('Erro', 'Por favor, preencha todos os campos obrigatórios (Animal, Data, Horário)');
+      return;
+    }
+    try {
+      await api.post('/clinic/appointment', form);
+      setModalVisible(false);
+      resetForm();
+      loadAppointments();
+      Alert.alert('Sucesso', 'Consulta agendada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao agendar:', error);
+      Alert.alert('Erro', error.response?.data?.message || 'Erro ao agendar consulta');
+    }
   };
 
-  // Renderiza cada agendamento
-  const renderAppointment = ({ item }) => {
-    return (
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardTime}>
-            {item.hour ? item.hour.substring(0, 5) : '--:--'}
+  // Resetar formulário
+  const resetForm = () => {
+    setForm({
+      date: new Date().toISOString().split('T')[0],
+      hour: '',
+      animal_id: '',
+      animalSearchTerm: '',
+      type_appointments: 'consulta',
+      description: '',
+      team: []
+    });
+  };
+
+  // Renderizar item de agendamento
+  const renderAppointment = ({ item }) => (
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.cardTime}>
+          {item.hour ? item.hour.substring(0, 5) : '--:--'}
+        </Text>
+        <Text style={styles.cardType}>
+          {item.type_appointments || 'Consulta'}
+        </Text>
+      </View>
+
+      <Text style={styles.cardTitle}>
+        {item.animal?.name || 'Animal não especificado'}
+      </Text>
+
+      <Text style={styles.cardOwner}>
+        Dono: {item.owner_animal?.name || 'Dono não especificado'}
+      </Text>
+
+      {item.description && (
+        <Text style={styles.cardDescription}>
+          {item.description}
+        </Text>
+      )}
+
+      {item.team && item.team.length > 0 && (
+        <View style={styles.teamContainer}>
+          <Text style={styles.teamTitle}>Equipe:</Text>
+          {item.team.map((member, index) => (
+            <View key={`${item.id}-${index}`} style={styles.teamMember}>
+              <Text style={styles.teamMemberName}>
+                {member.name || 'Membro sem nome'}
+              </Text>
+              <Text style={styles.teamMemberType}>
+                ({member.member_type || 'Tipo não especificado'})
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+
+  // Renderizar item de animal - Versão Corrigida
+  const renderAnimalItem = ({ item }) => (
+    <TouchableOpacity 
+      style={styles.animalItem} 
+      onPress={() => selectAnimal(item)}
+    >
+      <Text style={styles.animalName}>{item.name}</Text>
+      <Text style={styles.animalOwner}>Dono: {item.owner_name || 'Não informado'}</Text>
+      {item.species && <Text style={styles.animalSpecies}>Espécie: {item.species}</Text>}
+    </TouchableOpacity>
+  );
+
+  // Renderizar item de membro da equipe
+  const renderTeamMemberItem = ({ item }) => (
+    <TouchableOpacity 
+      style={styles.teamMemberItem}
+      onPress={() => selectTeamMember(item)}
+    >
+      <Text style={styles.teamMemberName}>{item.name}</Text>
+      <Text style={styles.teamMemberType}>{item.member_type}</Text>
+    </TouchableOpacity>
+  );
+
+  // Modal de Seleção de Equipe
+  const TeamSelectionModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={false}
+      visible={showTeamModal}
+      onRequestClose={() => setShowTeamModal(false)}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>
+            Selecionar {currentTeamType === 'employee' ? 'Funcionário' : 'Estudante'}
           </Text>
-          <Text style={styles.cardType}>
-            {item.type_appointments || 'Consulta'}
-          </Text>
+          <TouchableOpacity onPress={() => setShowTeamModal(false)}>
+            <Icon name="close" size={24} color="#f44336" />
+          </TouchableOpacity>
         </View>
 
-        <Text style={styles.cardTitle}>
-          {item.animal?.name || 'Animal não especificado'}
-        </Text>
-
-        <Text style={styles.cardOwner}>
-          Dono: {item.owner_animal?.name || 'Dono não especificado'}
-        </Text>
-
-        {item.description && (
-          <Text style={styles.cardDescription}>
-            {item.description}
-          </Text>
-        )}
-
-        {item.team && item.team.length > 0 && (
-          <View style={styles.teamContainer}>
-            <Text style={styles.teamTitle}>Equipe:</Text>
-            {item.team.map((member, index) => (
-              <View key={`${item.id}-${index}`} style={styles.teamMember}>
-                <Text style={styles.teamMemberName}>
-                  {member.name || 'Membro sem nome'}
-                </Text>
-                <Text style={styles.teamMemberType}>
-                  ({member.member_type || 'Tipo não especificado'})
-                </Text>
-              </View>
-            ))}
-          </View>
+        {loadingTeam ? (
+          <ActivityIndicator size="large" color="#4CAF50" />
+        ) : (
+          <FlatList
+            data={currentTeamType === 'employee' ? teamMembers.employees : teamMembers.students}
+            renderItem={renderTeamMemberItem}
+            keyExtractor={(item) => item.member_id?.toString() || Math.random().toString()}
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>
+                Nenhum {currentTeamType === 'employee' ? 'funcionário' : 'estudante'} disponível
+              </Text>
+            }
+          />
         )}
       </View>
-    );
-  };
+    </Modal>
+  );
 
   return (
     <View style={styles.container}>
@@ -360,6 +488,7 @@ const AppointmentScreen = () => {
             </TouchableOpacity>
           </View>
 
+          {/* Campo de Data */}
           <View style={styles.formGroup}>
             <Text style={styles.label}>Data</Text>
             <TouchableOpacity
@@ -374,6 +503,7 @@ const AppointmentScreen = () => {
             </TouchableOpacity>
           </View>
 
+          {/* Campo de Horário */}
           <View style={styles.formGroup}>
             <Text style={styles.label}>Horário</Text>
             <TouchableOpacity
@@ -388,17 +518,46 @@ const AppointmentScreen = () => {
             </TouchableOpacity>
           </View>
 
+          {/* Campo de Animal - Versão Corrigida */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>ID do Animal</Text>
-            <TextInput
+            <Text style={styles.label}>Animal</Text>
+            <TouchableOpacity
               style={styles.input}
-              placeholder="ID do Animal"
-              value={form.animal_id}
-              onChangeText={(text) => setForm({ ...form, animal_id: text })}
-              keyboardType="numeric"
-            />
+              onPress={() => setShowAnimalsDropdown(!showAnimalsDropdown)}
+            >
+              <Text>{form.animalSearchTerm || 'Selecione um animal'}</Text>
+            </TouchableOpacity>
+            
+            {showAnimalsDropdown && (
+              <View style={styles.animalsDropdown}>
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Buscar animal..."
+                  value={form.animalSearchTerm}
+                  onChangeText={filterAnimals}
+                  autoFocus={true}
+                />
+                
+                {animalData.loading ? (
+                  <ActivityIndicator size="small" color="#4CAF50" style={styles.loadingIndicator} />
+                ) : (
+                  <FlatList
+                    data={animalData.filteredAnimals}
+                    renderItem={renderAnimalItem}
+                    keyExtractor={item => item.id?.toString() || `animal-${Math.random().toString(36).substr(2, 9)}`}
+                    keyboardShouldPersistTaps="handled"
+                    ListEmptyComponent={
+                      <Text style={styles.emptyText}>
+                        {form.animalSearchTerm ? 'Nenhum animal encontrado' : 'Nenhum animal cadastrado'}
+                      </Text>
+                    }
+                  />
+                )}
+              </View>
+            )}
           </View>
 
+          {/* Campo de Tipo de Consulta */}
           <View style={styles.formGroup}>
             <Text style={styles.label}>Tipo de Consulta</Text>
             <View style={styles.typeFilter}>
@@ -419,6 +578,7 @@ const AppointmentScreen = () => {
             </View>
           </View>
 
+          {/* Campo de Descrição */}
           <View style={styles.formGroup}>
             <Text style={styles.label}>Descrição</Text>
             <TextInput
@@ -429,12 +589,12 @@ const AppointmentScreen = () => {
             />
           </View>
 
-          {/* Equipe */}
+          {/* Campo de Equipe */}
           <View style={styles.formGroup}>
             <Text style={styles.label}>Equipe</Text>
             {form.team.map((member, index) => (
               <View key={index} style={styles.teamMemberForm}>
-                <Text>{member.member_type} - ID: {member.member_id}</Text>
+                <Text>{member.name} ({member.member_type})</Text>
                 <TouchableOpacity onPress={() => removeTeamMember(index)}>
                   <Icon name="delete" size={20} color="#f44336" />
                 </TouchableOpacity>
@@ -444,19 +604,20 @@ const AppointmentScreen = () => {
             <View style={styles.addTeamButtons}>
               <TouchableOpacity
                 style={[styles.filterButton, { marginRight: 10 }]}
-                onPress={() => addTeamMember('veterinario')}
+                onPress={() => openTeamModal('employee')}
               >
-                <Text style={styles.filterText}>+ Veterinário</Text>
+                <Text style={styles.filterText}>+ Funcionário</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.filterButton}
-                onPress={() => addTeamMember('tecnico')}
+                onPress={() => openTeamModal('student')}
               >
-                <Text style={styles.filterText}>+ Técnico</Text>
+                <Text style={styles.filterText}>+ Estudante</Text>
               </TouchableOpacity>
             </View>
           </View>
 
+          {/* Botão de Agendar */}
           <TouchableOpacity style={styles.submitButton} onPress={scheduleAppointment}>
             <Text style={styles.submitButtonText}>Agendar</Text>
           </TouchableOpacity>
@@ -479,9 +640,11 @@ const AppointmentScreen = () => {
               onChange={handleFormDateChange}
             />
           )}
-
         </ScrollView>
       </Modal>
+
+      {/* Modal de Seleção de Equipe */}
+      <TeamSelectionModal />
     </View>
   );
 };
@@ -500,7 +663,10 @@ const styles = StyleSheet.create({
   activeFilter: { backgroundColor: '#4CAF50' },
   filterText: { color: '#000' },
   loader: { marginTop: 30 },
+  loadingIndicator: { marginVertical: 10 },
   listContent: { paddingBottom: 100 },
+  
+  // Estilos para cards de agendamento
   card: {
     backgroundColor: '#FFFFFF',
     padding: 16,
@@ -568,17 +734,93 @@ const styles = StyleSheet.create({
     color: '#666',
     fontStyle: 'italic',
   },
+  
+  // Estilos para o modal
   modalContainer: { flex: 1, padding: 15, backgroundColor: '#fff' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
   modalTitle: { fontSize: 20, fontWeight: 'bold' },
   formGroup: { marginBottom: 15 },
   label: { fontWeight: 'bold', marginBottom: 5 },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 5, paddingHorizontal: 10, height: 40, justifyContent: 'center' },
-  teamMemberForm: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 },
-  addTeamButtons: { flexDirection: 'row', marginTop: 5 },
-  submitButton: { backgroundColor: '#4CAF50', padding: 15, borderRadius: 8, alignItems: 'center', marginTop: 10 },
-  submitButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  emptyText: { textAlign: 'center', marginTop: 30, fontSize: 16, color: '#999' }
+  input: { 
+    borderWidth: 1, 
+    borderColor: '#ccc', 
+    borderRadius: 5, 
+    paddingHorizontal: 10, 
+    height: 40, 
+    justifyContent: 'center' 
+  },
+  
+  // Estilos para dropdown de animais
+  animalsDropdown: { 
+    maxHeight: 200,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    marginTop: 5,
+    backgroundColor: '#fff'
+  },
+  animalItem: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee'
+  },
+  animalName: {
+    fontWeight: 'bold',
+    fontSize: 16
+  },
+  animalOwner: {
+    fontSize: 14,
+    color: '#666'
+  },
+  animalSpecies: {
+    fontSize: 12,
+    color: '#888',
+    fontStyle: 'italic'
+  },
+  
+  // Estilos para equipe no formulário
+  teamMemberForm: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: 5,
+    padding: 8,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 5
+  },
+  addTeamButtons: { 
+    flexDirection: 'row', 
+    marginTop: 5 
+  },
+  
+  // Estilos para seleção de membros da equipe
+  teamMemberItem: {
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee'
+  },
+  
+  // Botão de submit
+  submitButton: { 
+    backgroundColor: '#4CAF50', 
+    padding: 15, 
+    borderRadius: 8, 
+    alignItems: 'center', 
+    marginTop: 10 
+  },
+  submitButtonText: { 
+    color: '#fff', 
+    fontWeight: 'bold', 
+    fontSize: 16 
+  },
+  
+  // Texto para listas vazias
+  emptyText: { 
+    textAlign: 'center', 
+    marginTop: 30, 
+    fontSize: 16, 
+    color: '#999' 
+  }
 });
 
 export default AppointmentScreen;
