@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import Icon from 'react-native-vector-icons/FontAwesome5'; // Importando o ícone de pata
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
@@ -20,30 +21,26 @@ const LoginScreen = ({ navigation }) => {
       navigation.replace('Home');
     } catch (error) {
       setLoading(false);
-  
-
       if (error.response) {
- 
         console.error('Error response:', error.response.data);
         alert(`Erro: ${error.response.data.message || 'Falha na autenticação'}`);
       } else if (error.request) {
-        
         console.error('Error request:', error.request);
         alert('Erro de rede. Tente novamente mais tarde.');
       } else {
         console.error('General error:', error.message);
         alert('Ocorreu um erro inesperado. Tente novamente.');
       }
-    } finally {
-      setLoading(false);
     }
   };
-  
 
   return (
     <View style={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.title}>Higeia Login</Text>
+        {/* Ícone de pata adicionado aqui */}
+        <Icon name="paw" size={50} color="#4CAF50" style={styles.pawIcon} />
+        
+        <Text style={styles.title}>IFC Login</Text>
         <TextInput
           value={email}
           onChangeText={setEmail}
@@ -89,12 +86,15 @@ const styles = StyleSheet.create({
     elevation: 6,
     alignItems: 'center',
   },
+  pawIcon: {
+    marginBottom: 15,
+  },
   title: {
     fontSize: 26,
     fontWeight: 'bold',
     marginBottom: 30,
     textAlign: 'center',
-    color: '#4F46E5',
+    color: '#4CAF50',
   },
   input: {
     borderWidth: 1,
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   button: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#4CAF50',
     paddingVertical: 14,
     borderRadius: 14,
     alignItems: 'center',
@@ -114,6 +114,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   buttonText: {
+    
     color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 16,

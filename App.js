@@ -14,8 +14,8 @@ import { Badge } from 'react-native-paper';
 
 // Importando as telas
 import LoginScreen from './src/screens/LoginScreen';
-import ListarProdutos from './src/screens/Products/ListarProdutos';
-import CadastrarProduto from './src/screens/Products/CriarProduto';
+import ProductList from './src/screens/Products/ProductList';
+import CadastrarProduto from './src/screens/Products/RegisterProduct';
 import ProductEntryScreen from './src/screens/ProductEntry';
 import ListProductEntry from './src/screens/ListProductEntry';
 import DashboardStock from './src/screens/Stock/DashboardStock';
@@ -38,7 +38,7 @@ const DrawerIcon = name => (
 
 const ProdutosNavigator = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
-    <Stack.Screen name="ListarProdutos" component={ListarProdutos} />
+    <Stack.Screen name="ProductList" component={ProductList} />
     <Stack.Screen name="CadastrarProduto" component={CadastrarProduto} />
     <Stack.Screen name="EntradaProduto" component={ProductEntryScreen} />
     <Stack.Screen name="ListProductEntry" component={ListProductEntry} />
@@ -115,7 +115,7 @@ const CustomDrawerContent = props => {
             label="Produtos"
             labelStyle={{ color: '#fff' }}
             icon={() => DrawerIcon('file-medical')}
-            onPress={() => props.navigation.navigate('Produtos', { screen: 'ListarProdutos' })}
+            onPress={() => props.navigation.navigate('Produtos', { screen: 'ProductList' })}
           />
           <DrawerItem
             label="Criar Produtos"

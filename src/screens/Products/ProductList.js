@@ -3,7 +3,7 @@ import { View, Text, FlatList, SafeAreaView, StyleSheet, ActivityIndicator, Aler
 import api from '../../api/api';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
-export default function ListarProdutos() {
+export default function ProductList() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -86,7 +86,7 @@ export default function ListarProdutos() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#c2c2c2',
+    backgroundColor: '#f5f5f5',
   },
   loading: {
     flex: 1,
@@ -101,12 +101,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ccc',
     alignItems: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: 0,
   },
   searchInput: {
     flex: 1,
     height: 40,
-    paddingHorizontal: 0,
+    paddingHorizontal: 20,
   },
   searchButton: {
     backgroundColor: '#008000',

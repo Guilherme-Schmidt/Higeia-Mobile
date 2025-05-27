@@ -10,7 +10,6 @@ const ListClient = ({ navigation }) => {
   const fetchClients = async () => {
     try {
       const response = await api.get('reg/client');
-      // Acessa a propriedade 'items' do response.data
       setClients(response.data.items || []);
     } catch (error) {
       Alert.alert('Erro', 'Não foi possível carregar a lista de clientes');
