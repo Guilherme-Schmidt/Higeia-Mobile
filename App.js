@@ -1,7 +1,7 @@
 /* eslint-disable react/no-unstable-nested-components */
 /* eslint-disable react-native/no-inline-styles */
 import React, { useState } from 'react';
-import { View, Text, Switch } from 'react-native';
+import { View, Text, Switch, Alert } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import {
@@ -20,11 +20,11 @@ import ProductEntryScreen from './src/screens/ProductEntry';
 import ListProductEntry from './src/screens/ListProductEntry';
 import DashboardStock from './src/screens/Stock/DashboardStock';
 import ListLowStock from './src/screens/Stock/ListLowStock';
-import ListHospitalizedAnimals from './src/screens/Animals/ListHospitalizedAnimals';
 import ListAllAnimals from './src/screens/Animals/ListAnimals';
 import AppointmentScreen from './src/screens/Appointments/AppointmentScreen';
-import NovoAgendamentoScreen from './src/screens/Appointments/NovoAgendamentoScreen';
-
+import RegisterAnimals from './src/screens/Animals/RegisterAnimals'; // Nova importação
+import RegisterClient from './src/screens/Animals/RegisterClient';
+import ListClient from './src/screens/Animals/ListClient';
 const Stack = createStackNavigator();
 const Drawer = createDrawerNavigator();
 
@@ -50,14 +50,39 @@ const ProdutosNavigator = () => (
 const ClinicaNavigator = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="Appointments" component={AppointmentScreen} />
-    <Stack.Screen name="Novo Agendamento" component={NovoAgendamentoScreen} />
-    <Stack.Screen name="ListHospitalizedAnimals" component={ListHospitalizedAnimals} />
     <Stack.Screen name="ListAllAnimals" component={ListAllAnimals} />
+    <Stack.Screen name="RegisterAnimals" component={RegisterAnimals} />
+     <Stack.Screen name="ListClients" component={ListClient} />
+    <Stack.Screen name="RegisterClient" component={RegisterClient} />
   </Stack.Navigator>
 );
 
+
 const CustomDrawerContent = props => {
   const [menuExpandido, setMenuExpandido] = useState(true);
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Sair',
+      'Deseja realmente sair do sistema?',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Sair',
+          onPress: () => {
+            props.navigation.reset({
+              index: 0,
+              routes: [{ name: 'Login' }],
+            });
+          },
+        },
+      ],
+      { cancelable: false }
+    );
+  };
 
   return (
     <DrawerContentScrollView {...props} style={{ backgroundColor: '#121212' }}>
@@ -122,29 +147,51 @@ const CustomDrawerContent = props => {
         </>
       )}
 
-      <Text style={{ ...HEADER_STYLE, marginLeft: 15, marginTop: 10 }}>Clínica</Text>
-      {menuExpandido && (
-        <>
-          <DrawerItem
-            label="Agendamentos"
-            labelStyle={{ color: '#fff' }}
-            icon={() => DrawerIcon('calendar-alt')}
-            onPress={() => props.navigation.navigate('Clínica', { screen: 'Appointments' })}
-          />
-          <DrawerItem
-            label="Internações"
-            labelStyle={{ color: '#fff' }}
-            icon={() => DrawerIcon('hospital')}
-            onPress={() => props.navigation.navigate('Clínica', { screen: 'ListHospitalizedAnimals' })}
-          />
-          <DrawerItem
-            label="Todos os Animais"
-            labelStyle={{ color: '#fff' }}
-            icon={() => DrawerIcon('paw')}
-            onPress={() => props.navigation.navigate('Clínica', { screen: 'ListAllAnimals' })}
-          />
-        </>
-      )}
+    <Text style={{ ...HEADER_STYLE, marginLeft: 15, marginTop: 10 }}>Clínica</Text>
+{menuExpandido && (
+  <>
+    <DrawerItem
+      label="Agendamentos"
+      labelStyle={{ color: '#fff' }}
+      icon={() => DrawerIcon('calendar-alt')}
+      onPress={() => props.navigation.navigate('Clínica', { screen: 'Appointments' })}
+    />
+    <DrawerItem
+      label="Todos os Animais"
+      labelStyle={{ color: '#fff' }}
+      icon={() => DrawerIcon('paw')}
+      onPress={() => props.navigation.navigate('Clínica', { screen: 'ListAllAnimals' })}
+    />
+    <DrawerItem
+      label="Cadastrar Animal"
+      labelStyle={{ color: '#fff' }}
+      icon={() => DrawerIcon('plus-circle')}
+      onPress={() => props.navigation.navigate('Clínica', { screen: 'RegisterAnimals' })}
+    />
+    <DrawerItem
+  label="Clientes"
+  labelStyle={{ color: '#fff' }}
+  icon={() => DrawerIcon('users')}
+  onPress={() => props.navigation.navigate('Clínica', { screen: 'ListClients' })}
+/>
+<DrawerItem
+  label="Cadastrar Cliente"
+  labelStyle={{ color: '#fff' }}
+  icon={() => DrawerIcon('user-plus')}
+  onPress={() => props.navigation.navigate('Clínica', { screen: 'RegisterClient' })}
+/>
+  </>
+)}
+
+      {/* Botão de Logout no final do menu */}
+      <View style={{ marginTop: 'auto', marginBottom: 20 }}>
+        <DrawerItem
+          label="Sair"
+          labelStyle={{ color: '#ff4444', fontWeight: 'bold' }}
+          icon={() => <Icon name="sign-out-alt" size={ICON_SIZE} color="#ff4444" />}
+          onPress={handleLogout}
+        />
+      </View>
     </DrawerContentScrollView>
   );
 };
