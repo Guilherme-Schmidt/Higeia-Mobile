@@ -16,12 +16,10 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import api from '../../api/api';
 
 const AppointmentScreen = () => {
-  // Estados principais
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   
-  // Estados para filtros de data
   const [showDateRangePicker, setShowDateRangePicker] = useState(false);
   const [dateRangePickerField, setDateRangePickerField] = useState(null);
   const [dateRange, setDateRange] = useState({
@@ -29,7 +27,6 @@ const AppointmentScreen = () => {
     endDate: new Date(new Date().setDate(new Date().getDate() + 7))
   });
 
-  // Estados para animais
   const [animalData, setAnimalData] = useState({
     loading: false,
     animals: [],
@@ -97,7 +94,6 @@ const AppointmentScreen = () => {
   const loadAnimals = async () => {
     try {
       setAnimalData(prev => ({...prev, loading: true}));
-      
       const response = await api.get('/reg/animal', {
         params: {
           page: 1,
@@ -177,7 +173,6 @@ const AppointmentScreen = () => {
     setShowAnimalsDropdown(false);
   };
 
-  // Manipuladores de data/hora
   const handleFormDateChange = (event, selected) => {
     if (event.type === 'dismissed') {
       setShowFormDatePicker(false);
@@ -238,7 +233,6 @@ const AppointmentScreen = () => {
     });
   };
 
-  // Agendar consulta
   const scheduleAppointment = async () => {
     if (!form.animal_id || !form.date || !form.hour) {
       Alert.alert('Erro', 'Por favor, preencha todos os campos obrigatórios (Animal, Data, Horário)');
