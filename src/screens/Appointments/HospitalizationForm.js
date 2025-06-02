@@ -16,7 +16,7 @@ const HospitalizationForm = ({ navigation }) => {
     const fetchAnimals = async () => {
       try {
         const response = await api.get('/reg/animal');
-        setAnimals(response.data);
+        setAnimals(response.data.items);
       } catch (error) {
         Alert.alert('Erro', 'Não foi possível carregar os animais');
       } finally {
@@ -27,34 +27,33 @@ const HospitalizationForm = ({ navigation }) => {
     fetchAnimals();
   }, []);
 
-  const handleSubmit = async () => {
-    if (!selectedAnimal) {
-      Alert.alert('Atenção', 'Selecione um animal');
-      return;
-    }
-
-    try {
-      const data = {
-        animal_id: selectedAnimal,
-        admission_date: admissionDate.toISOString(),
-        discharge: false
-      };
-
-      await api.post('/clinic/hospitalization', data);
-      Alert.alert('Sucesso', 'Internação cadastrada com sucesso');
-      navigation.goBack();
-    } catch (error) {
-      Alert.alert('Erro', error.response?.data?.message || 'Não foi possível cadastrar a internação');
-    }
+  // ✅ Função para formatar a data no padrão MySQL (YYYY-MM-DD HH:MM:SS)
+  const formatDateForMySQL = (date) => {
+    const pad = (n) => (n < 10 ? '0' + n : n);
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
   };
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2196F3" />
-      </View>
-    );
+  const handleSubmit = async () => {
+  if (!selectedAnimal) {
+    Alert.alert('Atenção', 'Selecione um animal');
+    return;
   }
+
+  try {
+    const data = {
+      animal_id: selectedAnimal,
+      admission_date: formatDateForMySQL(admissionDate),
+      discharge: false,
+    };
+
+    await api.post('/clinic/hospitalization', data);
+    Alert.alert('Sucesso', 'Internação cadastrada com sucesso');
+    navigation.goBack();
+  } catch (error) {
+    // Aqui pega a mensagem correta que vem do backend
+    Alert.alert('Erro', error.response?.data?.error || 'Não foi possível cadastrar a internação');
+  }
+};
 
   return (
     <View style={styles.container}>

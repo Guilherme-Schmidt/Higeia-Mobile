@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Switch, Alert } from 'react-native';
+import { View, Text, Switch, Alert, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import {
@@ -8,9 +8,11 @@ import {
   DrawerItem,
 } from '@react-navigation/drawer';
 import Icon from 'react-native-vector-icons/FontAwesome5';
-import { Badge } from 'react-native-paper';
+import axios from 'axios';
 
-// Telas existentes
+// Configuração básica do axios
+import api from './src/api/api'; // Certifique-se de que o caminho está correto
+// Import das telas (mantidas iguais)
 import LoginScreen from './src/screens/LoginScreen';
 import ProductList from './src/screens/Products/ProductList';
 import CadastrarProduto from './src/screens/Products/RegisterProduct';
@@ -23,24 +25,26 @@ import AppointmentScreen from './src/screens/Appointments/AppointmentScreen';
 import RegisterAnimals from './src/screens/Animals/RegisterAnimals';
 import RegisterClient from './src/screens/Animals/RegisterClient';
 import ListClient from './src/screens/Animals/ListClient';
-
-// Telas de hospitalização
 import HospitalizationsList from './src/screens/Appointments/HospitalizationsList';
 import HospitalizationForm from './src/screens/Appointments/HospitalizationForm';
 import AnimalHospitalizationHistory from './src/screens/Appointments/AnimalHospitalizationHistory';
+import HospitalizationDetailScreen from './src/screens/Appointments/HospitalizationDetailScreen';
+import AddHospitalizationRecordScreen from './src/screens/Appointments/AddHospitalizationRecordScreen';
+import RecordDetailScreen from './src/screens/Appointments/RecordDetailScreen';
 
 const Stack = createStackNavigator();
 const Drawer = createDrawerNavigator();
 
-const ICON_COLOR = '#2196F3'; // Azul mais profissional
+// Constantes de estilo
+const ICON_COLOR = '#2196F3';
 const ICON_SIZE = 20;
-const HEADER_STYLE = { color: '#fff', fontWeight: 'bold' };
+const ACTIVE_BG_COLOR = 'rgba(255, 255, 255, 0.1)';
 
-const DrawerIcon = name => (
-  <Icon name={name} size={ICON_SIZE} color={ICON_COLOR} />
+const DrawerIcon = ({ name, color = ICON_COLOR, size = ICON_SIZE }) => (
+  <Icon name={name} size={size} color={color} />
 );
 
-// Navegador de Farmácia
+// Navigator Farmácia
 const ProdutosNavigator = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="ProductList" component={ProductList} />
@@ -52,7 +56,7 @@ const ProdutosNavigator = () => (
   </Stack.Navigator>
 );
 
-// Navegador de Clínica
+// Navigator Clínica
 const ClinicaNavigator = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="Appointments" component={AppointmentScreen} />
@@ -63,200 +67,327 @@ const ClinicaNavigator = () => (
   </Stack.Navigator>
 );
 
-// Navegador de Hospitalização
+// Navigator Hospitalização
 const HospitalizacaoNavigator = () => (
-  <Stack.Navigator screenOptions={{ headerShown: false }}>
-    <Stack.Screen name="HospitalizationsList" component={HospitalizationsList} />
-    <Stack.Screen name="HospitalizationForm" component={HospitalizationForm} />
-    <Stack.Screen name="AnimalHospitalizationHistory" component={AnimalHospitalizationHistory} />
+  <Stack.Navigator 
+    screenOptions={{ 
+      headerShown: false,
+      headerStyle: {
+        backgroundColor: '#e74c3c',
+      },
+      headerTintColor: '#fff',
+      headerTitleStyle: {
+        fontWeight: 'bold',
+      }
+    }}
+  >
+    <Stack.Screen 
+      name="HospitalizationsList" 
+      component={HospitalizationsList} 
+      options={{ title: 'Animais Internados' }}
+    />
+    <Stack.Screen 
+      name="HospitalizationForm" 
+      component={HospitalizationForm} 
+      options={{ title: 'Nova Internação' }}
+    />
+    <Stack.Screen 
+      name="AnimalHospitalizationHistory" 
+      component={AnimalHospitalizationHistory} 
+      options={({ route }) => ({ 
+        title: `Histórico - ${route.params.animalName}` 
+      })}
+    />
+    <Stack.Screen 
+      name="HospitalizationDetail" 
+      component={HospitalizationDetailScreen} 
+      options={({ route }) => ({ 
+        title: `Registros - ${route.params.animalName}` 
+      })}
+    />
+    <Stack.Screen 
+      name="AddHospitalizationRecord" 
+      component={AddHospitalizationRecordScreen} 
+      options={{ title: 'Novo Registro Clínico' }}
+    />
+    <Stack.Screen 
+      name="RecordDetail" 
+      component={RecordDetailScreen} 
+      options={{ title: 'Detalhes do Registro' }}
+    />
   </Stack.Navigator>
 );
 
 // Conteúdo personalizado do Drawer
-const CustomDrawerContent = props => {
+const CustomDrawerContent = ({ navigation, ...props }) => {
   const [menuExpandido, setMenuExpandido] = useState(true);
+  const [loadingLogout, setLoadingLogout] = useState(false);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      setLoadingLogout(true);
+      
+      // Chamada para a API de logout
+      await api.post('/logout');
+      
+      // Redireciona para a tela de login após logout bem-sucedido
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+      Alert.alert('Erro', 'Não foi possível fazer logout. Tente novamente.');
+    } finally {
+      setLoadingLogout(false);
+    }
+  };
+
+  const confirmLogout = () => {
     Alert.alert(
-      'Sair',
-      'Deseja realmente sair do sistema?',
+      'Sair do Sistema',
+      'Deseja realmente sair do aplicativo?',
       [
         { text: 'Cancelar', style: 'cancel' },
         { 
           text: 'Sair', 
-          onPress: () => {
-            props.navigation.reset({
-              index: 0,
-              routes: [{ name: 'Login' }],
-            });
-          }
+          onPress: handleLogout,
+          style: 'destructive'
         }
       ],
-      { cancelable: false }
+      { cancelable: true }
     );
   };
 
+  // Estilos organizados
+  const styles = {
+    container: {
+      flex: 1,
+      backgroundColor: '#2c3e50',
+    },
+    header: {
+      padding: 20,
+      backgroundColor: '#1a2639',
+      borderBottomWidth: 1,
+      borderBottomColor: '#34495e',
+    },
+    appTitle: {
+      color: '#fff',
+      fontSize: 22,
+      fontWeight: 'bold',
+      marginBottom: 4,
+    },
+    welcomeText: {
+      color: '#bdc3c7',
+      fontSize: 14,
+    },
+    toggleContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: '#34495e',
+    },
+    toggleText: {
+      color: '#fff',
+      flex: 1,
+      fontSize: 14,
+    },
+    sectionContainer: {
+      marginTop: 8,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+    },
+    sectionTitle: {
+      color: '#fff',
+      fontSize: 14,
+      fontWeight: 'bold',
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+      marginLeft: 8,
+    },
+    menuItem: {
+      marginVertical: 2,
+      borderRadius: 4,
+      paddingLeft: 16,
+    },
+    logoutContainer: {
+      marginTop: 'auto',
+      marginBottom: 20,
+      borderTopWidth: 1,
+      borderTopColor: '#34495e',
+      paddingTop: 12,
+    },
+    labelStyle: {
+      color: '#fff',
+      fontSize: 14,
+    },
+    activeLabelStyle: {
+      fontWeight: 'bold',
+    },
+  };
+
+  // Seções do menu
+  const menuSections = [
+    {
+      title: 'Dashboard',
+      icon: 'home',
+      onPress: () => navigation.navigate('Home'),
+      color: '#fff',
+    },
+    {
+      title: 'Farmácia',
+      icon: 'pills',
+      color: '#3498db',
+      items: [
+        { label: 'Estoque', icon: 'boxes', screen: 'Produtos', route: 'DashboardStock' },
+        { label: 'Produtos', icon: 'pills', screen: 'Produtos', route: 'ProductList' },
+        { label: 'Cadastrar Produto', icon: 'plus-circle', screen: 'Produtos', route: 'CadastrarProduto' },
+        { label: 'Entrada de Produtos', icon: 'box-open', screen: 'Produtos', route: 'EntradaProduto' },
+      ],
+    },
+    {
+      title: 'Clínica',
+      icon: 'clinic-medical',
+      color: '#2ecc71',
+      items: [
+        { label: 'Agendamentos', icon: 'calendar-alt', screen: 'Clínica', route: 'Appointments' },
+        { label: 'Todos os Animais', icon: 'paw', screen: 'Clínica', route: 'ListAllAnimals' },
+        { label: 'Cadastrar Animal', icon: 'plus-circle', screen: 'Clínica', route: 'RegisterAnimals' },
+        { label: 'Clientes', icon: 'users', screen: 'Clínica', route: 'ListClients' },
+        { label: 'Cadastrar Cliente', icon: 'user-plus', screen: 'Clínica', route: 'RegisterClient' },
+      ],
+    },
+    {
+      title: 'Hospitalização',
+      icon: 'procedures',
+      color: '#e74c3c',
+      items: [
+        { label: 'Animais Internados', icon: 'procedures', screen: 'Hospitalizacao', route: 'HospitalizationsList' },
+        { label: 'Nova Internação', icon: 'hospital', screen: 'Hospitalizacao', route: 'HospitalizationForm' },
+      ],
+    },
+  ];
+
   return (
-    <DrawerContentScrollView {...props} style={{ backgroundColor: '#2c3e50' }}>
-      <View style={{ padding: 20, borderBottomWidth: 1, borderBottomColor: '#34495e' }}>
-        <Text style={{ color: '#fff', fontSize: 22, fontWeight: 'bold' }}>VetClinic</Text>
-        <Text style={{ color: '#bdc3c7', fontSize: 14 }}>Bem-vindo, Veterinário</Text>
+    <DrawerContentScrollView {...props} style={styles.container}>
+      {/* Cabeçalho */}
+      <View style={styles.header}>
+        <Text style={styles.appTitle}>VetClinic Pro</Text>
+        <Text style={styles.welcomeText}>Bem-vindo, Veterinário</Text>
       </View>
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', padding: 15 }}>
-        <Text style={{ ...HEADER_STYLE, flex: 1 }}>Menu Expandido</Text>
+      {/* Toggle para expandir/recolher menu */}
+      <View style={styles.toggleContainer}>
+        <Text style={styles.toggleText}>Menu Expandido</Text>
         <Switch
           value={menuExpandido}
           onValueChange={setMenuExpandido}
           thumbColor={ICON_COLOR}
+          trackColor={{ false: '#767577', true: '#81b0ff' }}
         />
       </View>
 
-      <DrawerItem
-        label="Dashboard"
-        labelStyle={{ color: '#fff' }}
-        icon={() => DrawerIcon('home')}
-        onPress={() => props.navigation.navigate('Home')}
-      />
-
-      {/* Seção Farmácia */}
-      <Text style={{ ...HEADER_STYLE, marginLeft: 15, marginTop: 10, color: '#3498db' }}>Farmácia</Text>
-      {menuExpandido && (
-        <>
-          <DrawerItem
-            label="Estoque"
-            labelStyle={{ color: '#fff' }}
-            icon={() => DrawerIcon('boxes')}
-            onPress={() => props.navigation.navigate('Produtos', { screen: 'DashboardStock' })}
-          />
-          <DrawerItem
-            label="Produtos"
-            labelStyle={{ color: '#fff' }}
-            icon={() => DrawerIcon('pills')}
-            onPress={() => props.navigation.navigate('Produtos', { screen: 'ProductList' })}
-          />
-          <DrawerItem
-            label="Cadastrar Produto"
-            labelStyle={{ color: '#fff' }}
-            icon={() => DrawerIcon('plus-circle')}
-            onPress={() => props.navigation.navigate('Produtos', { screen: 'CadastrarProduto' })}
-          />
-          <DrawerItem
-            label="Entrada de Produtos"
-            labelStyle={{ color: '#fff' }}
-            icon={() => DrawerIcon('box-open')}
-            onPress={() => props.navigation.navigate('Produtos', { screen: 'EntradaProduto' })}
-          />
-        </>
-      )}
-
-      {/* Seção Clínica */}
-      <Text style={{ ...HEADER_STYLE, marginLeft: 15, marginTop: 10, color: '#2ecc71' }}>Clínica</Text>
-      {menuExpandido && (
-        <>
-          <DrawerItem
-            label="Agendamentos"
-            labelStyle={{ color: '#fff' }}
-            icon={() => DrawerIcon('calendar-alt')}
-            onPress={() => props.navigation.navigate('Clínica', { screen: 'Appointments' })}
-          />
-          <DrawerItem
-            label="Todos os Animais"
-            labelStyle={{ color: '#fff' }}
-            icon={() => DrawerIcon('paw')}
-            onPress={() => props.navigation.navigate('Clínica', { screen: 'ListAllAnimals' })}
-          />
-          <DrawerItem
-            label="Cadastrar Animal"
-            labelStyle={{ color: '#fff' }}
-            icon={() => DrawerIcon('plus-circle')}
-            onPress={() => props.navigation.navigate('Clínica', { screen: 'RegisterAnimals' })}
-          />
-          <DrawerItem
-            label="Clientes"
-            labelStyle={{ color: '#fff' }}
-            icon={() => DrawerIcon('users')}
-            onPress={() => props.navigation.navigate('Clínica', { screen: 'ListClients' })}
-          />
-          <DrawerItem
-            label="Cadastrar Cliente"
-            labelStyle={{ color: '#fff' }}
-            icon={() => DrawerIcon('user-plus')}
-            onPress={() => props.navigation.navigate('Clínica', { screen: 'RegisterClient' })}
-          />
-        </>
-      )}
-
-      {/* Seção Hospitalização */}
-      <Text style={{ ...HEADER_STYLE, marginLeft: 15, marginTop: 10, color: '#e74c3c' }}>Hospitalização</Text>
-      {menuExpandido && (
-        <>
-          <DrawerItem
-            label="Animais Internados"
-            labelStyle={{ color: '#fff' }}
-            icon={() => DrawerIcon('procedures')}
-            onPress={() => props.navigation.navigate('Hospitalizacao', { screen: 'HospitalizationsList' })}
-          />
-          <DrawerItem
-            label="Nova Internação"
-            labelStyle={{ color: '#fff' }}
-            icon={() => DrawerIcon('hospital')}
-            onPress={() => props.navigation.navigate('Hospitalizacao', { screen: 'HospitalizationForm' })}
-          />
-        </>
-      )}
+      {/* Itens do menu */}
+      {menuSections.map((section, index) => (
+        <View key={index} style={styles.sectionContainer}>
+          {section.items ? (
+            <>
+              <View style={styles.sectionHeader}>
+                <DrawerIcon name={section.icon} color={section.color} size={16} />
+                <Text style={[styles.sectionTitle, { color: section.color }]}>
+                  {section.title}
+                </Text>
+              </View>
+              
+              {menuExpandido && section.items.map((item, itemIndex) => (
+                <DrawerItem
+                  key={itemIndex}
+                  label={item.label}
+                  labelStyle={styles.labelStyle}
+                  icon={() => <DrawerIcon name={item.icon} />}
+                  onPress={() => navigation.navigate(item.screen, { screen: item.route })}
+                  style={styles.menuItem}
+                  activeBackgroundColor={ACTIVE_BG_COLOR}
+                />
+              ))}
+            </>
+          ) : (
+            <DrawerItem
+              label={section.title}
+              labelStyle={styles.labelStyle}
+              icon={() => <DrawerIcon name={section.icon} color={section.color} />}
+              onPress={section.onPress}
+              style={styles.menuItem}
+              activeBackgroundColor={ACTIVE_BG_COLOR}
+            />
+          )}
+        </View>
+      ))}
 
       {/* Botão de Logout */}
-      <View style={{ marginTop: 'auto', marginBottom: 20 }}>
+      <View style={styles.logoutContainer}>
         <DrawerItem
-          label="Sair"
-          labelStyle={{ color: '#ff4444', fontWeight: 'bold' }}
-          icon={() => <Icon name="sign-out-alt" size={ICON_SIZE} color="#ff4444" />}
-          onPress={handleLogout}
+          label={loadingLogout ? 'Saindo...' : 'Sair do Sistema'}
+          labelStyle={[styles.labelStyle, { color: '#ff6b6b' }]}
+          icon={() => loadingLogout ? (
+            <ActivityIndicator size="small" color="#ff6b6b" />
+          ) : (
+            <DrawerIcon name="sign-out-alt" color="#ff6b6b" />
+          )}
+          onPress={confirmLogout}
+          style={styles.menuItem}
+          disabled={loadingLogout}
         />
       </View>
     </DrawerContentScrollView>
   );
 };
 
-// Navegador Drawer principal
+// Drawer principal
 const DrawerNavigator = () => (
-  <Drawer.Navigator 
+  <Drawer.Navigator
     drawerContent={props => <CustomDrawerContent {...props} />}
     screenOptions={{
+      drawerType: 'front',
       drawerStyle: {
         width: 280,
       },
       drawerActiveTintColor: ICON_COLOR,
       drawerInactiveTintColor: '#fff',
+      overlayColor: 'transparent',
     }}
   >
     <Drawer.Screen 
       name="Produtos" 
       component={ProdutosNavigator}
       options={{
-        drawerIcon: ({ color }) => DrawerIcon('pills'),
+        drawerIcon: ({ color }) => <DrawerIcon name="pills" color={color} />,
       }}
     />
     <Drawer.Screen 
       name="Clínica" 
       component={ClinicaNavigator}
       options={{
-        drawerIcon: ({ color }) => DrawerIcon('clinic-medical'),
+        drawerIcon: ({ color }) => <DrawerIcon name="clinic-medical" color={color} />,
       }}
     />
     <Drawer.Screen 
       name="Hospitalizacao" 
       component={HospitalizacaoNavigator}
       options={{
-        drawerIcon: ({ color }) => DrawerIcon('procedures'),
+        drawerIcon: ({ color }) => <DrawerIcon name="procedures" color={color} />,
         title: 'Hospitalização',
       }}
     />
   </Drawer.Navigator>
 );
 
-// Navegador principal
+// Navigator principal
 const MainNavigator = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="Login" component={LoginScreen} />

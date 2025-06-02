@@ -7,18 +7,22 @@ const HospitalizationsList = ({ navigation }) => {
   const [hospitalizations, setHospitalizations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [dischargingId, setDischargingId] = useState(null); // Para indicar qual animal está sendo liberado
 
   const fetchHospitalizations = async () => {
-    try {
-      const response = await api.get('/clinic/hospitalization?discharge=false');
-      setHospitalizations(response.data);
-    } catch (error) {
-      Alert.alert('Erro', 'Não foi possível carregar as internações');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+  try {
+    setLoading(true);
+    const response = await api.get('/clinic/hospitalization?discharge=false');
+    // filtra apenas os que discharge !== 1
+    const filtered = response.data.filter(item => item.discharge !== 1);
+    setHospitalizations(filtered);
+  } catch (error) {
+    Alert.alert('Erro', 'Não foi possível carregar as internações');
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+};
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', fetchHospitalizations);
@@ -28,15 +32,19 @@ const HospitalizationsList = ({ navigation }) => {
   const handleDischarge = async (id) => {
     Alert.alert('Liberar animal', 'Deseja liberar este animal?', [
       { text: 'Cancelar', style: 'cancel' },
-      { 
-        text: 'Liberar', 
+      {
+        text: 'Liberar',
         onPress: async () => {
           try {
-            await api.put(`/clinic/hospitalizations/${id}/discharge`);
-            fetchHospitalizations();
+            setDischargingId(id);
+            await api.put(`/clinic/hospitalizations/${id}/discharge`, {}); // rota PUT /clinic/hospitalization/:id/discharge
+            await fetchHospitalizations();
             Alert.alert('Sucesso', 'Animal liberado com sucesso');
           } catch (error) {
+            console.log('Erro ao liberar animal:', error.response ? error.response.data : error.message);
             Alert.alert('Erro', 'Não foi possível liberar o animal');
+          } finally {
+            setDischargingId(null);
           }
         }
       }
@@ -44,43 +52,56 @@ const HospitalizationsList = ({ navigation }) => {
   };
 
   const renderItem = ({ item }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.item}
-      onPress={() => navigation.navigate('AnimalHospitalizationHistory', { 
+      onPress={() => navigation.navigate('AnimalHospitalizationHistory', {
         animalId: item.animal.id,
-        animalName: item.animal.name 
+        animalName: item.animal.name
       })}
+      activeOpacity={0.7}
     >
       <View style={styles.itemHeader}>
         <Text style={styles.animalName}>{item.animal.name}</Text>
         <Text style={styles.animalSpecies}>{item.animal.species}</Text>
       </View>
-      
+
       <View style={styles.infoRow}>
         <Icon name="calendar-alt" size={14} color="#666" />
         <Text style={styles.infoText}>
           Internado em: {new Date(item.admission_date).toLocaleDateString()}
         </Text>
       </View>
-      
+
       <View style={styles.actions}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.detailsButton}
-          onPress={() => navigation.navigate('AnimalHospitalizationHistory', { 
+          onPress={() => navigation.navigate('AnimalHospitalizationHistory', {
             animalId: item.animal.id,
-            animalName: item.animal.name 
+            animalName: item.animal.name
           })}
+          activeOpacity={0.7}
         >
           <Icon name="history" size={16} color="#fff" />
           <Text style={styles.buttonText}>Histórico</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.dischargeButton}
+
+        <TouchableOpacity
+          style={[
+            styles.dischargeButton,
+            dischargingId === item.id && { opacity: 0.6 }
+          ]}
           onPress={() => handleDischarge(item.id)}
+          disabled={dischargingId === item.id}
+          activeOpacity={0.7}
         >
-          <Icon name="sign-out-alt" size={16} color="#fff" />
-          <Text style={styles.buttonText}>Liberar</Text>
+          {dischargingId === item.id ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <>
+              <Icon name="sign-out-alt" size={16} color="#fff" />
+              <Text style={styles.buttonText}>Liberar</Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -113,10 +134,11 @@ const HospitalizationsList = ({ navigation }) => {
         }}
         contentContainerStyle={hospitalizations.length === 0 && styles.emptyList}
       />
-      
-      <TouchableOpacity 
+
+      <TouchableOpacity
         style={styles.addButton}
         onPress={() => navigation.navigate('HospitalizationForm')}
+        activeOpacity={0.7}
       >
         <Icon name="plus" size={24} color="#fff" />
       </TouchableOpacity>
