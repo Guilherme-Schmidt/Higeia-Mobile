@@ -9,7 +9,9 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
-  ScrollView
+  ScrollView,
+  SafeAreaView,
+  StatusBar
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -34,7 +36,6 @@ const AppointmentScreen = () => {
   });
   const [showAnimalsDropdown, setShowAnimalsDropdown] = useState(false);
 
-  // Estados para equipe
   const [teamMembers, setTeamMembers] = useState({
     employees: [],
     students: []
@@ -43,18 +44,15 @@ const AppointmentScreen = () => {
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [currentTeamType, setCurrentTeamType] = useState('');
 
-  // Estados para pickers de data/hora do formulário
   const [showFormDatePicker, setShowFormDatePicker] = useState(false);
   const [formPickerMode, setFormPickerMode] = useState('date');
   const [formPickerField, setFormPickerField] = useState(null);
 
-  // Estados para filtros
   const [filters, setFilters] = useState({
     search: '',
     type: 'all'
   });
 
-  // Estado do formulário
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
     hour: '',
@@ -65,14 +63,12 @@ const AppointmentScreen = () => {
     team: []
   });
 
-  // Carregar dados iniciais
   useEffect(() => {
     loadAppointments();
     loadAnimals();
     loadTeamMembers();
   }, []);
 
-  // Carregar agendamentos
   const loadAppointments = async () => {
     try {
       setLoading(true);
@@ -90,19 +86,11 @@ const AppointmentScreen = () => {
     }
   };
 
-  // Carregar animais - Versão Corrigida
   const loadAnimals = async () => {
     try {
       setAnimalData(prev => ({...prev, loading: true}));
       const response = await api.get('/reg/animal', {
-        params: {
-          page: 1,
-          size: 500
-        },
-        headers: {
-          'Authorization': 'Bearer seu_token_aqui',
-          'Content-Type': 'application/json'
-        }
+        params: { page: 1, size: 500 }
       });
 
       setAnimalData({
@@ -117,20 +105,11 @@ const AppointmentScreen = () => {
     }
   };
 
-  // Carregar membros da equipe
   const loadTeamMembers = async () => {
     try {
       setLoadingTeam(true);
       const response = await api.get('/reg/team/members', {
-        params: {
-          query: '',
-          page: 1,
-          size: 500
-        },
-        headers: {
-          'Authorization': 'Bearer seu_token_aqui',
-          'Content-Type': 'application/json'
-        }
+        params: { query: '', page: 1, size: 500 }
       });
 
       setTeamMembers({
@@ -145,7 +124,6 @@ const AppointmentScreen = () => {
     }
   };
 
-  // Filtrar animais - Versão Corrigida
   const filterAnimals = (text) => {
     setForm(prev => ({...prev, animalSearchTerm: text}));
     
@@ -163,7 +141,6 @@ const AppointmentScreen = () => {
     });
   };
 
-  // Selecionar animal - Versão Corrigida
   const selectAnimal = (animal) => {
     setForm(prev => ({
       ...prev,
@@ -207,7 +184,6 @@ const AppointmentScreen = () => {
     setShowDateRangePicker(false);
   };
 
-  // Manipuladores de equipe
   const openTeamModal = (type) => {
     setCurrentTeamType(type);
     setShowTeamModal(true);
@@ -250,7 +226,6 @@ const AppointmentScreen = () => {
     }
   };
 
-  // Resetar formulário
   const resetForm = () => {
     setForm({
       date: new Date().toISOString().split('T')[0],
@@ -263,7 +238,6 @@ const AppointmentScreen = () => {
     });
   };
 
-  // Renderizar item de agendamento
   const renderAppointment = ({ item }) => (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
@@ -307,7 +281,6 @@ const AppointmentScreen = () => {
     </View>
   );
 
-  // Renderizar item de animal - Versão Corrigida
   const renderAnimalItem = ({ item }) => (
     <TouchableOpacity 
       style={styles.animalItem} 
@@ -319,7 +292,6 @@ const AppointmentScreen = () => {
     </TouchableOpacity>
   );
 
-  // Renderizar item de membro da equipe
   const renderTeamMemberItem = ({ item }) => (
     <TouchableOpacity 
       style={styles.teamMemberItem}
@@ -330,7 +302,6 @@ const AppointmentScreen = () => {
     </TouchableOpacity>
   );
 
-  // Modal de Seleção de Equipe
   const TeamSelectionModal = () => (
     <Modal
       animationType="slide"
@@ -338,18 +309,18 @@ const AppointmentScreen = () => {
       visible={showTeamModal}
       onRequestClose={() => setShowTeamModal(false)}
     >
-      <View style={styles.modalContainer}>
+      <SafeAreaView style={styles.modalContainer}>
         <View style={styles.modalHeader}>
           <Text style={styles.modalTitle}>
             Selecionar {currentTeamType === 'employee' ? 'Funcionário' : 'Estudante'}
           </Text>
           <TouchableOpacity onPress={() => setShowTeamModal(false)}>
-            <Icon name="close" size={24} color="#f44336" />
+            <Icon name="close" size={24} color="#e74c3c" />
           </TouchableOpacity>
         </View>
 
         {loadingTeam ? (
-          <ActivityIndicator size="large" color="#4CAF50" />
+          <ActivityIndicator size="large" color="#e74c3c" />
         ) : (
           <FlatList
             data={currentTeamType === 'employee' ? teamMembers.employees : teamMembers.students}
@@ -362,17 +333,22 @@ const AppointmentScreen = () => {
             }
           />
         )}
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar backgroundColor="#e74c3c" barStyle="light-content" />
+      
       {/* Cabeçalho */}
       <View style={styles.header}>
-        <Text style={styles.title}>Agendamentos</Text>
-        <TouchableOpacity onPress={() => setModalVisible(true)}>
-          <Icon name="add" size={30} color="#4CAF50" />
+        <Text style={styles.headerTitle}>Agendamentos</Text>
+        <TouchableOpacity 
+          style={styles.addButton}
+          onPress={() => setModalVisible(true)}
+        >
+          <Icon name="add" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
 
@@ -385,7 +361,10 @@ const AppointmentScreen = () => {
             setShowDateRangePicker(true);
           }}
         >
-          <Text>{dateRange.startDate.toLocaleDateString()}</Text>
+          <Icon name="event" size={18} color="#555" />
+          <Text style={styles.dateText}>
+            {dateRange.startDate.toLocaleDateString('pt-BR')}
+          </Text>
         </TouchableOpacity>
 
         <Text style={styles.dateSeparator}>a</Text>
@@ -397,17 +376,21 @@ const AppointmentScreen = () => {
             setShowDateRangePicker(true);
           }}
         >
-          <Text>{dateRange.endDate.toLocaleDateString()}</Text>
+          <Icon name="event" size={18} color="#555" />
+          <Text style={styles.dateText}>
+            {dateRange.endDate.toLocaleDateString('pt-BR')}
+          </Text>
         </TouchableOpacity>
       </View>
 
-      {/* DateTimePicker para Filtros de Data */}
       {showDateRangePicker && (
         <DateTimePicker
           value={dateRangePickerField === 'startDate' ? dateRange.startDate : dateRange.endDate}
           mode="date"
           display="default"
           onChange={handleDateRangeChange}
+          locale="pt-BR"
+          themeVariant="light"
         />
       )}
 
@@ -416,11 +399,16 @@ const AppointmentScreen = () => {
         <TextInput
           style={styles.searchInput}
           placeholder="Buscar..."
+          placeholderTextColor="#999"
           value={filters.search}
           onChangeText={(text) => setFilters({ ...filters, search: text })}
         />
 
-        <View style={styles.typeFilter}>
+        <ScrollView 
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.typeFilterContainer}
+        >
           {['all', 'consulta', 'cirurgia', 'vacina'].map((type) => (
             <TouchableOpacity
               key={type}
@@ -430,38 +418,40 @@ const AppointmentScreen = () => {
               ]}
               onPress={() => setFilters({ ...filters, type })}
             >
-              <Text style={styles.filterText}>
+              <Text style={[
+                styles.filterText,
+                filters.type === type && styles.activeFilterText
+              ]}>
                 {type === 'all' ? 'Todos' : type.charAt(0).toUpperCase() + type.slice(1)}
               </Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
       </View>
 
       {/* Lista de Consultas */}
       {loading ? (
-        <ActivityIndicator size="large" color="#4CAF50" style={styles.loader} />
+        <ActivityIndicator size="large" color="#e74c3c" style={styles.loader} />
       ) : (
         <FlatList
           data={appointments.filter(apt => {
-            // Filtro por tipo
             if (filters.type !== 'all' && apt.type_appointments !== filters.type) {
               return false;
             }
-
-            // Filtro por busca
             if (filters.search &&
               !apt.animal?.name.toLowerCase().includes(filters.search.toLowerCase()) &&
               !apt.owner_animal?.name.toLowerCase().includes(filters.search.toLowerCase())) {
               return false;
             }
-
             return true;
           })}
           renderItem={renderAppointment}
           keyExtractor={item => item.id.toString()}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>Nenhum agendamento no período</Text>
+            <View style={styles.emptyContainer}>
+              <Icon name="event-busy" size={40} color="#ddd" />
+              <Text style={styles.emptyText}>Nenhum agendamento no período</Text>
+            </View>
           }
           contentContainerStyle={styles.listContent}
         />
@@ -474,203 +464,320 @@ const AppointmentScreen = () => {
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <ScrollView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Novo Agendamento</Text>
-            <TouchableOpacity onPress={() => setModalVisible(false)}>
-              <Icon name="close" size={24} color="#f44336" />
-            </TouchableOpacity>
-          </View>
+        <SafeAreaView style={styles.modalContainer}>
+          <ScrollView contentContainerStyle={styles.modalScrollContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Novo Agendamento</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <Icon name="close" size={24} color="#e74c3c" />
+              </TouchableOpacity>
+            </View>
 
-          {/* Campo de Data */}
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Data</Text>
-            <TouchableOpacity
-              style={styles.input}
-              onPress={() => {
-                setFormPickerMode('date');
-                setFormPickerField('date');
-                setShowFormDatePicker(true);
-              }}
-            >
-              <Text>{form.date}</Text>
-            </TouchableOpacity>
-          </View>
+            {/* Campo de Data */}
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Data *</Text>
+              <TouchableOpacity
+                style={styles.input}
+                onPress={() => {
+                  setFormPickerMode('date');
+                  setFormPickerField('date');
+                  setShowFormDatePicker(true);
+                }}
+              >
+                <Icon name="calendar-today" size={18} color="#555" />
+                <Text style={styles.inputText}>{form.date}</Text>
+              </TouchableOpacity>
+            </View>
 
-          {/* Campo de Horário */}
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Horário</Text>
-            <TouchableOpacity
-              style={styles.input}
-              onPress={() => {
-                setFormPickerMode('time');
-                setFormPickerField('hour');
-                setShowFormDatePicker(true);
-              }}
-            >
-              <Text>{form.hour || 'Selecione o horário'}</Text>
-            </TouchableOpacity>
-          </View>
+            {/* Campo de Horário */}
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Horário *</Text>
+              <TouchableOpacity
+                style={styles.input}
+                onPress={() => {
+                  setFormPickerMode('time');
+                  setFormPickerField('hour');
+                  setShowFormDatePicker(true);
+                }}
+              >
+                <Icon name="access-time" size={18} color="#555" />
+                <Text style={styles.inputText}>
+                  {form.hour || 'Selecione o horário'}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-          {/* Campo de Animal - Versão Corrigida */}
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Animal</Text>
-            <TouchableOpacity
-              style={styles.input}
-              onPress={() => setShowAnimalsDropdown(!showAnimalsDropdown)}
-            >
-              <Text>{form.animalSearchTerm || 'Selecione um animal'}</Text>
-            </TouchableOpacity>
-            
-            {showAnimalsDropdown && (
-              <View style={styles.animalsDropdown}>
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Buscar animal..."
-                  value={form.animalSearchTerm}
-                  onChangeText={filterAnimals}
-                  autoFocus={true}
-                />
-                
-                {animalData.loading ? (
-                  <ActivityIndicator size="small" color="#4CAF50" style={styles.loadingIndicator} />
-                ) : (
-                  <FlatList
-                    data={animalData.filteredAnimals}
-                    renderItem={renderAnimalItem}
-                    keyExtractor={item => item.id?.toString() || `animal-${Math.random().toString(36).substr(2, 9)}`}
-                    keyboardShouldPersistTaps="handled"
-                    ListEmptyComponent={
-                      <Text style={styles.emptyText}>
-                        {form.animalSearchTerm ? 'Nenhum animal encontrado' : 'Nenhum animal cadastrado'}
-                      </Text>
-                    }
-                  />
-                )}
-              </View>
+            {showFormDatePicker && (
+              <DateTimePicker
+                value={
+                  formPickerField === 'hour' && form.hour
+                    ? (() => {
+                      const [h, m] = form.hour.split(':');
+                      const d = new Date();
+                      d.setHours(parseInt(h), parseInt(m));
+                      return d;
+                    })()
+                    : new Date(form.date)
+                }
+                mode={formPickerMode}
+                display="default"
+                onChange={handleFormDateChange}
+                locale="pt-BR"
+                themeVariant="light"
+              />
             )}
-          </View>
 
-          {/* Campo de Tipo de Consulta */}
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Tipo de Consulta</Text>
-            <View style={styles.typeFilter}>
-              {['consulta', 'cirurgia', 'vacina'].map((type) => (
-                <TouchableOpacity
-                  key={type}
-                  style={[
-                    styles.filterButton,
-                    form.type_appointments === type && styles.activeFilter
-                  ]}
-                  onPress={() => setForm({ ...form, type_appointments: type })}
-                >
-                  <Text style={styles.filterText}>
-                    {type.charAt(0).toUpperCase() + type.slice(1)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            {/* Campo de Animal */}
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Animal *</Text>
+              <TouchableOpacity
+                style={styles.input}
+                onPress={() => setShowAnimalsDropdown(!showAnimalsDropdown)}
+              >
+                <Icon name="pets" size={18} color="#555" />
+                <Text style={styles.inputText}>
+                  {form.animalSearchTerm || 'Selecione um animal'}
+                </Text>
+              </TouchableOpacity>
+              
+              {showAnimalsDropdown && (
+                <View style={styles.animalsDropdown}>
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Buscar animal..."
+                    placeholderTextColor="#999"
+                    value={form.animalSearchTerm}
+                    onChangeText={filterAnimals}
+                    autoFocus={true}
+                  />
+                  
+                  {animalData.loading ? (
+                    <ActivityIndicator size="small" color="#e74c3c" style={styles.loadingIndicator} />
+                  ) : (
+                    <FlatList
+                      data={animalData.filteredAnimals}
+                      renderItem={renderAnimalItem}
+                      keyExtractor={item => item.id?.toString() || `animal-${Math.random().toString(36).substr(2, 9)}`}
+                      keyboardShouldPersistTaps="handled"
+                      ListEmptyComponent={
+                        <Text style={styles.emptyText}>
+                          {form.animalSearchTerm ? 'Nenhum animal encontrado' : 'Nenhum animal cadastrado'}
+                        </Text>
+                      }
+                    />
+                  )}
+                </View>
+              )}
             </View>
-          </View>
 
-          {/* Campo de Descrição */}
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Descrição</Text>
-            <TextInput
-              style={[styles.input, { height: 80 }]}
-              multiline
-              value={form.description}
-              onChangeText={(text) => setForm({ ...form, description: text })}
-            />
-          </View>
+            {/* Campo de Tipo de Consulta */}
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Tipo de Consulta</Text>
+              <ScrollView 
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.typeFilterContainer}
+              >
+                {['consulta', 'cirurgia', 'vacina'].map((type) => (
+                  <TouchableOpacity
+                    key={type}
+                    style={[
+                      styles.filterButton,
+                      form.type_appointments === type && styles.activeFilter
+                    ]}
+                    onPress={() => setForm({ ...form, type_appointments: type })}
+                  >
+                    <Text style={[
+                      styles.filterText,
+                      form.type_appointments === type && styles.activeFilterText
+                    ]}>
+                      {type.charAt(0).toUpperCase() + type.slice(1)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
 
-          {/* Campo de Equipe */}
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Equipe</Text>
-            {form.team.map((member, index) => (
-              <View key={index} style={styles.teamMemberForm}>
-                <Text>{member.name} ({member.member_type})</Text>
-                <TouchableOpacity onPress={() => removeTeamMember(index)}>
-                  <Icon name="delete" size={20} color="#f44336" />
+            {/* Campo de Descrição */}
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Descrição</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                multiline
+                numberOfLines={4}
+                value={form.description}
+                onChangeText={(text) => setForm({ ...form, description: text })}
+              />
+            </View>
+
+            {/* Campo de Equipe */}
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Equipe</Text>
+              {form.team.map((member, index) => (
+                <View key={index} style={styles.teamMemberForm}>
+                  <Text style={styles.teamMemberText}>
+                    {member.name} ({member.member_type})
+                  </Text>
+                  <TouchableOpacity onPress={() => removeTeamMember(index)}>
+                    <Icon name="delete" size={20} color="#e74c3c" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+
+              <View style={styles.addTeamButtons}>
+                <TouchableOpacity
+                  style={styles.teamTypeButton}
+                  onPress={() => openTeamModal('employee')}
+                >
+                  <Text style={styles.teamTypeButtonText}>+ Funcionário</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.teamTypeButton}
+                  onPress={() => openTeamModal('student')}
+                >
+                  <Text style={styles.teamTypeButtonText}>+ Estudante</Text>
                 </TouchableOpacity>
               </View>
-            ))}
-
-            <View style={styles.addTeamButtons}>
-              <TouchableOpacity
-                style={[styles.filterButton, { marginRight: 10 }]}
-                onPress={() => openTeamModal('employee')}
-              >
-                <Text style={styles.filterText}>+ Funcionário</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.filterButton}
-                onPress={() => openTeamModal('student')}
-              >
-                <Text style={styles.filterText}>+ Estudante</Text>
-              </TouchableOpacity>
             </View>
-          </View>
 
-          {/* Botão de Agendar */}
-          <TouchableOpacity style={styles.submitButton} onPress={scheduleAppointment}>
-            <Text style={styles.submitButtonText}>Agendar</Text>
-          </TouchableOpacity>
-
-          {/* DateTimePicker para o FORMULÁRIO */}
-          {showFormDatePicker && (
-            <DateTimePicker
-              value={
-                formPickerField === 'hour' && form.hour
-                  ? (() => {
-                    const [h, m] = form.hour.split(':');
-                    const d = new Date();
-                    d.setHours(parseInt(h), parseInt(m));
-                    return d;
-                  })()
-                  : new Date(form.date)
-              }
-              mode={formPickerMode}
-              display="default"
-              onChange={handleFormDateChange}
-            />
-          )}
-        </ScrollView>
+            {/* Botão de Agendar */}
+            <TouchableOpacity 
+              style={styles.submitButton} 
+              onPress={scheduleAppointment}
+            >
+              <Text style={styles.submitButtonText}>Agendar</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </SafeAreaView>
       </Modal>
 
       {/* Modal de Seleção de Equipe */}
       <TeamSelectionModal />
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 10, backgroundColor: '#fff' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  title: { fontSize: 22, fontWeight: 'bold' },
-  dateFilterContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
-  dateInput: { borderWidth: 1, borderColor: '#ccc', padding: 10, borderRadius: 5, minWidth: 110, alignItems: 'center' },
-  dateSeparator: { marginHorizontal: 5, fontSize: 18 },
-  filterContainer: { marginBottom: 10 },
-  searchInput: { borderWidth: 1, borderColor: '#ccc', borderRadius: 5, paddingHorizontal: 10, height: 40, marginBottom: 8 },
-  typeFilter: { flexDirection: 'row' },
-  filterButton: { paddingVertical: 5, paddingHorizontal: 12, borderRadius: 20, backgroundColor: '#ddd', marginRight: 6 },
-  activeFilter: { backgroundColor: '#4CAF50' },
-  filterText: { color: '#000' },
-  loader: { marginTop: 30 },
-  loadingIndicator: { marginVertical: 10 },
-  listContent: { paddingBottom: 100 },
-  
-  // Estilos para cards de agendamento
-  card: {
-    backgroundColor: '#FFFFFF',
+  container: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     padding: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  addButton: {
+    backgroundColor: '#e74c3c',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dateFilterContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#fff',
+  },
+  dateInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
     borderRadius: 8,
+    paddingHorizontal: 16,
+    height: 48,
+    flex: 1,
+    marginHorizontal: 8,
+  },
+  dateText: {
+    color: '#333',
+    marginLeft: 10,
+    fontSize: 16,
+  },
+  dateSeparator: {
+    fontSize: 16,
+    color: '#666',
+  },
+  filterContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  searchInput: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    height: 48,
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  typeFilterContainer: {
+    marginBottom: 12,
+  },
+  filterButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: '#eee',
+    marginRight: 8,
+  },
+  activeFilter: {
+    backgroundColor: '#e74c3c',
+  },
+  filterText: {
+    color: '#666',
+    fontSize: 14,
+  },
+  activeFilterText: {
+    color: '#fff',
+  },
+  loader: {
+    marginTop: 40,
+  },
+  listContent: {
+    padding: 16,
+    paddingBottom: 80,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyText: {
+    textAlign: 'center',
+    marginTop: 16,
+    fontSize: 16,
+    color: '#999',
+  },
+
+  // Card de agendamento
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 16,
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -684,7 +791,7 @@ const styles = StyleSheet.create({
   },
   cardType: {
     fontSize: 14,
-    color: '#4CAF50',
+    color: '#e74c3c',
     textTransform: 'capitalize',
   },
   cardTitle: {
@@ -707,7 +814,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#EEE',
+    borderTopColor: '#eee',
   },
   teamTitle: {
     fontWeight: 'bold',
@@ -728,93 +835,149 @@ const styles = StyleSheet.create({
     color: '#666',
     fontStyle: 'italic',
   },
-  
-  // Estilos para o modal
-  modalContainer: { flex: 1, padding: 15, backgroundColor: '#fff' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  modalTitle: { fontSize: 20, fontWeight: 'bold' },
-  formGroup: { marginBottom: 15 },
-  label: { fontWeight: 'bold', marginBottom: 5 },
-  input: { 
-    borderWidth: 1, 
-    borderColor: '#ccc', 
-    borderRadius: 5, 
-    paddingHorizontal: 10, 
-    height: 40, 
-    justifyContent: 'center' 
+
+  // Modal styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
   },
-  
-  // Estilos para dropdown de animais
-  animalsDropdown: { 
+  modalScrollContent: {
+    padding: 16,
+    paddingBottom: 30,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  formGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#555',
+    marginBottom: 8,
+  },
+  input: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    height: 48,
+  },
+  inputText: {
+    color: '#333',
+    marginLeft: 10,
+    fontSize: 16,
+    flex: 1,
+  },
+  textArea: {
+    height: 100,
+    paddingTop: 12,
+    textAlignVertical: 'top',
+  },
+
+  // Dropdown de animais
+  animalsDropdown: {
     maxHeight: 200,
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    marginTop: 5,
-    backgroundColor: '#fff'
+    borderColor: '#ddd',
+    borderRadius: 8,
+    marginTop: 8,
+    backgroundColor: '#fff',
   },
   animalItem: {
-    padding: 10,
+    padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee'
+    borderBottomColor: '#eee',
   },
   animalName: {
     fontWeight: 'bold',
-    fontSize: 16
+    fontSize: 16,
+    color: '#333',
   },
   animalOwner: {
     fontSize: 14,
-    color: '#666'
+    color: '#666',
   },
   animalSpecies: {
     fontSize: 12,
     color: '#888',
-    fontStyle: 'italic'
+    fontStyle: 'italic',
   },
-  
-  // Estilos para equipe no formulário
-  teamMemberForm: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    marginBottom: 5,
-    padding: 8,
+  loadingIndicator: {
+    marginVertical: 12,
+  },
+
+  // Equipe no formulário
+  teamMemberForm: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     backgroundColor: '#f5f5f5',
-    borderRadius: 5
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
   },
-  addTeamButtons: { 
-    flexDirection: 'row', 
-    marginTop: 5 
+  teamMemberText: {
+    fontSize: 14,
+    color: '#333',
   },
-  
-  // Estilos para seleção de membros da equipe
-  teamMemberItem: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee'
+  addTeamButtons: {
+    flexDirection: 'row',
+    marginTop: 8,
   },
-  
+  teamTypeButton: {
+    backgroundColor: '#3498db',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginRight: 8,
+  },
+  teamTypeButtonText: {
+    color: '#fff',
+    fontSize: 14,
+  },
+
   // Botão de submit
-  submitButton: { 
-    backgroundColor: '#4CAF50', 
-    padding: 15, 
-    borderRadius: 8, 
-    alignItems: 'center', 
-    marginTop: 10 
+  submitButton: {
+    backgroundColor: '#e74c3c',
+    borderRadius: 8,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
   },
-  submitButtonText: { 
-    color: '#fff', 
-    fontWeight: 'bold', 
-    fontSize: 16 
+  submitButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
-  
-  // Texto para listas vazias
-  emptyText: { 
-    textAlign: 'center', 
-    marginTop: 30, 
-    fontSize: 16, 
-    color: '#999' 
-  }
+
+  // Modal de seleção de equipe
+  teamMemberItem: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  teamMemberName: {
+    fontSize: 16,
+    color: '#333',
+  },
+  teamMemberType: {
+    fontSize: 14,
+    color: '#666',
+  },
 });
 
 export default AppointmentScreen;

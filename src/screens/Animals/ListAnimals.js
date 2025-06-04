@@ -1,11 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, Switch, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+  SafeAreaView,
+  StatusBar,
+  TouchableOpacity
+} from 'react-native';
+import Icon from 'react-native-vector-icons/Feather';
 import api from '../../api/api';
 
-export default function ListAnimals() {
+export default function ListAnimals({ navigation }) {
   const [animais, setAnimais] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [processando, setProcessando] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const carregarAnimais = async () => {
     try {
@@ -16,39 +28,36 @@ export default function ListAnimals() {
       console.error('Erro:', error.response?.data || error);
     } finally {
       setCarregando(false);
+      setRefreshing(false);
     }
   };
 
   const toggleInternacao = async (animalId, deveInternar) => {
     setProcessando(animalId);
-    
+
     try {
       if (deveInternar) {
-        // Internar animal
         const response = await api.post('/clinic/hospitalization', {
           animal_id: animalId,
-          weight: 0, // Valor inicial
-          temperature: 0, // Valor inicial
+          weight: 0,
+          temperature: 0,
           blood_pressure: '',
           observations: ''
         });
-        
-        // Atualiza estado local
-        setAnimais(prev => prev.map(animal => 
-          animal.id === animalId 
-            ? { ...animal, hospitalization: response.data } 
+
+        setAnimais(prev => prev.map(animal =>
+          animal.id === animalId
+            ? { ...animal, hospitalization: response.data }
             : animal
         ));
       } else {
-        // Dar alta
         await api.put(`/clinic/hospitalization/animal/${animalId}/discharge`, {
           discharged: true
         });
-        
-        // Atualiza estado local
-        setAnimais(prev => prev.map(animal => 
-          animal.id === animalId 
-            ? { ...animal, hospitalization: null } 
+
+        setAnimais(prev => prev.map(animal =>
+          animal.id === animalId
+            ? { ...animal, hospitalization: null }
             : animal
         ));
       }
@@ -60,64 +69,167 @@ export default function ListAnimals() {
     }
   };
 
-  useEffect(() => { carregarAnimais(); }, []);
+  const handleRefresh = () => {
+    setRefreshing(true);
+    carregarAnimais();
+  };
+
+  useEffect(() => { 
+    carregarAnimais(); 
+  }, []);
 
   const renderItem = ({ item }) => {
     const estaInternado = item.hospitalization && !item.hospitalization.discharged;
-    
+
     return (
       <View style={styles.card}>
-        <View style={{ flex: 1 }}>
+        <View style={styles.cardContent}>
           <Text style={styles.nome}>{item.name || 'Sem nome'}</Text>
-          <Text style={styles.info}>Espécie: {item.species} - Raça: {item.breed}</Text>
-          {estaInternado && <Text style={styles.status}>Status: Internado</Text>}
+          <View style={styles.infoContainer}>
+            <Text style={styles.info}>
+              <Icon name="type" size={14} color="#555" /> {item.species || '-'}
+            </Text>
+            <Text style={styles.info}>
+              <Icon name="git-branch" size={14} color="#555" /> {item.breed || '-'}
+            </Text>
+          </View>
+          
+          {estaInternado && (
+            <View style={styles.statusContainer}>
+              <Icon name="activity" size={14} color="#2ecc71" />
+              <Text style={styles.status}>Status: Internado</Text>
+            </View>
+          )}
         </View>
-        
-        {processando === item.id ? (
-          <ActivityIndicator size="small" color="#4CAF50" />
-        ) : (
-          <Switch
-            value={estaInternado}
-            onValueChange={(value) => toggleInternacao(item.id, value)}
-            thumbColor={estaInternado ? '#4CAF50' : '#f4f3f4'}
-          />
-        )}
       </View>
     );
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.titulo}>Controle de Internação</Text>
+    <SafeAreaView style={styles.container}>
+      <StatusBar backgroundColor="#e74c3c" barStyle="light-content" />
       
+      <View style={styles.header}>
+        <Text style={styles.titulo}>Animais Cadastrados</Text>
+        <TouchableOpacity 
+          style={styles.refreshButton}
+          onPress={handleRefresh}
+          disabled={refreshing}
+        >
+          <Icon 
+            name="refresh-cw" 
+            size={22} 
+            color={refreshing ? '#ccc' : '#e74c3c'} 
+          />
+        </TouchableOpacity>
+      </View>
+
       {carregando ? (
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#e74c3c" />
+        </View>
       ) : (
         <FlatList
           data={animais}
           renderItem={renderItem}
           keyExtractor={item => item.id.toString()}
-          ListEmptyComponent={<Text style={styles.vazio}>Nenhum animal</Text>}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Icon name="alert-circle" size={40} color="#ddd" />
+              <Text style={styles.vazio}>Nenhum animal encontrado</Text>
+            </View>
+          }
+          contentContainerStyle={styles.listContent}
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#f5f5f5' },
-  titulo: { fontSize: 22, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
+  container: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  titulo: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  refreshButton: {
+    padding: 8,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  listContent: {
+    padding: 16,
+    paddingBottom: 30,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    padding: 40,
+  },
+  vazio: {
+    textAlign: 'center',
+    marginTop: 16,
+    fontSize: 16,
+    color: '#999',
+  },
   card: {
     backgroundColor: '#fff',
+    borderRadius: 12,
     padding: 16,
-    borderRadius: 8,
     marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    elevation: 2
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  nome: { fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
-  info: { fontSize: 14, color: '#666' },
-  status: { color: '#4CAF50', fontWeight: 'bold', marginTop: 4 },
-  vazio: { textAlign: 'center', marginTop: 20, color: '#888' }
+  cardContent: {
+    flex: 1,
+  },
+  nome: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 6,
+  },
+  infoContainer: {
+    flexDirection: 'row',
+    marginBottom: 6,
+  },
+  info: {
+    fontSize: 14,
+    color: '#555',
+    marginRight: 16,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  status: {
+    color: '#2ecc71',
+    fontWeight: '600',
+    fontSize: 14,
+    marginLeft: 6,
+  },
 });

@@ -13,34 +13,39 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/Feather';
 import api from '../../api/api';
 import {Picker} from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function RegisterProduct({navigation}) {
-  const [name, setName] = useState('');
-  const [amount, setAmount] = useState('');
-  const [barCode, setBarCode] = useState('');
-  const [controlled, setControlled] = useState(false);
-  const [productCategory, setProductCategory] = useState('');
-  const [unit, setUnit] = useState('');
-  const [laboratory, setLaboratory] = useState('');
-  const [productUse, setProductUse] = useState('');
+  const [form, setForm] = useState({
+    name: '',
+    amount: '',
+    barCode: '',
+    controlled: false,
+    productCategory: '',
+    unit: '',
+    laboratory: '',
+    productUse: ''
+  });
   const [batches, setBatches] = useState([]);
   const [activePrinciples, setActivePrinciples] = useState([]);
-  const [newActivePrincipleName, setNewActivePrincipleName] = useState('');
-  const [newBatchNumber, setNewBatchNumber] = useState('');
-  const [newBatchValidity, setNewBatchValidity] = useState('');
-  const [newBatchEntryTotal, setNewBatchEntryTotal] = useState('');
-  const [newBatchOutputTotal, setNewBatchOutputTotal] = useState('');
+  const [newActivePrinciple, setNewActivePrinciple] = useState('');
+  const [newBatch, setNewBatch] = useState({
+    number: '',
+    validity: '',
+    entryTotal: '',
+    outputTotal: ''
+  });
 
-  const [categories, setCategories] = useState([]);
-  const [units, setUnits] = useState([]);
-  const [laboratories, setLaboratories] = useState([]);
-  const [productUses, setProductUses] = useState([]);
+  const [dropdownData, setDropdownData] = useState({
+    categories: [],
+    units: [],
+    laboratories: [],
+    productUses: []
+  });
   const [loading, setLoading] = useState(false);
-
-  // Estados para o date picker
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
 
@@ -58,10 +63,12 @@ export default function RegisterProduct({navigation}) {
         api.get('/pharmacy/products/use'),
       ]);
 
-      setCategories(categoriesRes.data?.items || []);
-      setUnits(unitsRes.data?.items || []);
-      setLaboratories(labsRes.data?.items || []);
-      setProductUses(usesRes.data?.items || []);
+      setDropdownData({
+        categories: categoriesRes.data?.items || [],
+        units: unitsRes.data?.items || [],
+        laboratories: labsRes.data?.items || [],
+        productUses: usesRes.data?.items || []
+      });
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
       Alert.alert('Erro', 'Não foi possível carregar os dados necessários.');
@@ -71,76 +78,76 @@ export default function RegisterProduct({navigation}) {
   }
 
   const handleAddBatch = () => {
-    if (!newBatchNumber || !newBatchValidity || !newBatchEntryTotal) {
-      Alert.alert('Atenção', 'Preencha os campos obrigatórios do lote (Número, Validade, Entrada Total)');
+    if (!newBatch.number || !newBatch.validity || !newBatch.entryTotal) {
+      Alert.alert('Atenção', 'Preencha os campos obrigatórios do lote');
       return;
     }
     
-    const newBatch = {
-      batch: newBatchNumber,
-      validity: newBatchValidity,
-      product_id: 0,
-      entry_total: parseInt(newBatchEntryTotal),
-      output_total: parseInt(newBatchOutputTotal || '0'),
-      amount_total: parseInt(newBatchEntryTotal) - parseInt(newBatchOutputTotal || '0'),
+    const batch = {
+      batch: newBatch.number,
+      validity: newBatch.validity,
+      entry_total: parseInt(newBatch.entryTotal),
+      output_total: parseInt(newBatch.outputTotal || '0'),
+      amount_total: parseInt(newBatch.entryTotal) - parseInt(newBatch.outputTotal || '0'),
     };
     
-    setBatches([...batches, newBatch]);
-    setNewBatchNumber('');
-    setNewBatchValidity('');
-    setNewBatchEntryTotal('');
-    setNewBatchOutputTotal('');
+    setBatches([...batches, batch]);
+    setNewBatch({
+      number: '',
+      validity: '',
+      entryTotal: '',
+      outputTotal: ''
+    });
   };
 
   const handleAddActivePrinciple = () => {
-    if (!newActivePrincipleName.trim()) {
-      Alert.alert('Atenção', 'O nome do princípio ativo não pode estar vazio.');
+    if (!newActivePrinciple.trim()) {
+      Alert.alert('Atenção', 'Informe o nome do princípio ativo');
       return;
     }
-    setActivePrinciples([...activePrinciples, { name: newActivePrincipleName.trim() }]);
-    setNewActivePrincipleName('');
+    setActivePrinciples([...activePrinciples, { name: newActivePrinciple.trim() }]);
+    setNewActivePrinciple('');
   };
 
-  const removeBatch = (index) => {
-    const newBatches = [...batches];
-    newBatches.splice(index, 1);
-    setBatches(newBatches);
-  };
-
-  const removeActivePrinciple = (index) => {
-    const newPrinciples = [...activePrinciples];
-    newPrinciples.splice(index, 1);
-    setActivePrinciples(newPrinciples);
+  const removeItem = (list, setList, index) => {
+    const newList = [...list];
+    newList.splice(index, 1);
+    setList(newList);
   };
 
   const handleDateChange = (event, date) => {
     setShowDatePicker(Platform.OS === 'ios');
     if (date) {
       setSelectedDate(date);
-      const formattedDate = date.toISOString().split('T')[0];
-      setNewBatchValidity(formattedDate);
+      setNewBatch({...newBatch, validity: date.toISOString().split('T')[0]});
     }
   };
 
-  const showDatepicker = () => {
-    setShowDatePicker(true);
-  };
-
   async function handleSave() {
-    if (!name || !amount || !barCode || !productCategory || !unit || !laboratory || !productUse) {
-      Alert.alert('Atenção', 'Preencha todos os campos obrigatórios');
+    const requiredFields = [
+      {field: 'name', label: 'Nome do produto'},
+      {field: 'amount', label: 'Quantidade'},
+      {field: 'barCode', label: 'Código de barras'},
+      {field: 'productCategory', label: 'Categoria'},
+      {field: 'unit', label: 'Unidade'},
+      {field: 'laboratory', label: 'Laboratório'},
+      {field: 'productUse', label: 'Uso do produto'}
+    ];
+
+    const missingField = requiredFields.find(f => !form[f.field]);
+    if (missingField) {
+      Alert.alert('Atenção', `Preencha o campo: ${missingField.label}`);
       return;
     }
 
     const payload = {
-      name,
-      product_category_id: productCategory,
-      amount: parseInt(amount),
-      unit_id: unit,
-      product_use_id: productUse,
-      controlled: controlled ? 1 : 0,
-      laboratory_id: laboratory,
-      bar_code: barCode,
+      ...form,
+      product_category_id: form.productCategory,
+      amount: parseInt(form.amount),
+      unit_id: form.unit,
+      product_use_id: form.productUse,
+      controlled: form.controlled ? 1 : 0,
+      laboratory_id: form.laboratory,
       batch_active: batches.length > 0,
       batchs: batches,
       active_principle: activePrinciples,
@@ -150,171 +157,185 @@ export default function RegisterProduct({navigation}) {
       setLoading(true);
       const response = await api.post('/pharmacy/product', payload);
 
-      if (response.data && response.data.Error === "Not create") {
-        let errorMessage = 'Não foi possível cadastrar o produto.';
-        if (response.data.Error_Message) {
-          errorMessage = Object.values(response.data.Error_Message).join('\n');
-        }
-        Alert.alert('Erro', errorMessage);
-      } else if (response.status >= 200 && response.status < 300) {
-        Alert.alert('Sucesso', 'Produto cadastrado com sucesso!', [
-          {text: 'OK', onPress: () => navigation.goBack()}
-        ]);
-      } else {
-        throw new Error(`Status HTTP inesperado: ${response.status}`);
-      }
-    } catch (error) {
-      console.error('Erro ao cadastrar:', error);
-      let errorMessage = 'Erro ao cadastrar produto';
-      
-      if (error.response) {
-        if (error.response.status === 205) {
-          errorMessage = 'Dados inválidos. Verifique as informações.';
-        } else {
-          errorMessage = error.response.data?.message || 
-                        `Erro ${error.response.status}: ${JSON.stringify(error.response.data)}`;
-        }
-      } else if (error.request) {
-        errorMessage = 'Sem resposta do servidor. Verifique sua conexão.';
-      } else {
-        errorMessage = error.message || 'Erro desconhecido ao processar a requisição.';
+      if (response.data?.Error === "Not create") {
+        const errorMessage = response.data.Error_Message 
+          ? Object.values(response.data.Error_Message).join('\n') 
+          : 'Não foi possível cadastrar o produto.';
+        throw new Error(errorMessage);
       }
 
-      Alert.alert('Erro', errorMessage);
+      Alert.alert('Sucesso', 'Produto cadastrado com sucesso!', [
+        {text: 'OK', onPress: () => navigation.goBack()}
+      ]);
+    } catch (error) {
+      console.error('Erro ao cadastrar:', error);
+      Alert.alert(
+        'Erro', 
+        error.response?.data?.message || 
+        error.message || 
+        'Erro ao cadastrar produto'
+      );
     } finally {
       setLoading(false);
     }
   }
 
-  if (loading && categories.length === 0 && units.length === 0 && laboratories.length === 0 && productUses.length === 0) {
+  const handleFormChange = (field, value) => {
+    setForm({...form, [field]: value});
+  };
+
+  if (loading && dropdownData.categories.length === 0) {
     return (
-      <SafeAreaView style={styles.container}>
-        <ActivityIndicator size="large" color="#008000" />
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#e74c3c" />
+        <Text style={styles.loadingText}>Carregando dados...</Text>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor="#4e9bde" barStyle="light-content" />
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.title}>Cadastrar Produto</Text>
+      <StatusBar backgroundColor="#e74c3c" barStyle="light-content" />
+      
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+      
 
+        {/* Formulário Principal */}
+        <Text style={styles.sectionTitle}>Informações Básicas</Text>
+        
         <TextInput
           style={styles.input}
           placeholder="Nome do produto *"
-          value={name}
-          onChangeText={setName}
+          value={form.name}
+          onChangeText={(text) => handleFormChange('name', text)}
           autoCapitalize="words"
         />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Quantidade *"
-          value={amount}
-          onChangeText={setAmount}
-          keyboardType="numeric"
-        />
-
-        <TextInput
-          style={styles.input}
-          placeholder="Código de barras *"
-          value={barCode}
-          onChangeText={setBarCode}
-          keyboardType="number-pad"
-        />
-
-        <Text style={styles.label}>Categoria *</Text>
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={productCategory}
-            onValueChange={setProductCategory}
-            style={styles.picker}
-          >
-            <Picker.Item label="Selecione uma categoria" value="" />
-            {categories.map(cat => (
-              <Picker.Item key={cat.id} label={cat.name} value={cat.id} />
-            ))}
-          </Picker>
-        </View>
-
-        <Text style={styles.label}>Unidade *</Text>
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={unit}
-            onValueChange={setUnit}
-            style={styles.picker}
-          >
-            <Picker.Item label="Selecione uma unidade" value="" />
-            {units.map(u => (
-              <Picker.Item key={u.id} label={u.name} value={u.id} />
-            ))}
-          </Picker>
-        </View>
-
-        <Text style={styles.label}>Laboratório *</Text>
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={laboratory}
-            onValueChange={setLaboratory}
-            style={styles.picker}
-          >
-            <Picker.Item label="Selecione um laboratório" value="" />
-            {laboratories.map(lab => (
-              <Picker.Item key={lab.id} label={lab.name} value={lab.id} />
-            ))}
-          </Picker>
-        </View>
-
-        <Text style={styles.label}>Uso do Produto *</Text>
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={productUse}
-            onValueChange={setProductUse}
-            style={styles.picker}
-          >
-            <Picker.Item label="Selecione um uso" value="" />
-            {productUses.map(use => (
-              <Picker.Item key={use.id} label={use.name} value={use.id} />
-            ))}
-          </Picker>
-        </View>
-
-        <View style={styles.switchContainer}>
-          <Text style={styles.label}>Controlado:</Text>
-          <Switch
-            value={controlled}
-            onValueChange={setControlled}
-            trackColor={{false: '#767577', true: '#81b0ff'}}
-            thumbColor={controlled ? '#f5dd4b' : '#f4f3f4'}
+        <View style={styles.row}>
+          <TextInput
+            style={[styles.input, {flex: 1, marginRight: 10}]}
+            placeholder="Quantidade *"
+            value={form.amount}
+            onChangeText={(text) => handleFormChange('amount', text)}
+            keyboardType="numeric"
+          />
+          <TextInput
+            style={[styles.input, {flex: 1}]}
+            placeholder="Código de barras *"
+            value={form.barCode}
+            onChangeText={(text) => handleFormChange('barCode', text)}
+            keyboardType="number-pad"
           />
         </View>
 
+        <View style={styles.pickerGroup}>
+          <Text style={styles.label}>Categoria *</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={form.productCategory}
+              onValueChange={(value) => handleFormChange('productCategory', value)}
+            >
+              <Picker.Item label="Selecione..." value="" />
+              {dropdownData.categories.map(cat => (
+                <Picker.Item key={cat.id} label={cat.name} value={cat.id} />
+              ))}
+            </Picker>
+          </View>
+        </View>
+
+        <View style={styles.row}>
+          <View style={[styles.pickerGroup, {flex: 1, marginRight: 10}]}>
+            <Text style={styles.label}>Unidade *</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={form.unit}
+                onValueChange={(value) => handleFormChange('unit', value)}
+              >
+                <Picker.Item label="Selecione..." value="" />
+                {dropdownData.units.map(u => (
+                  <Picker.Item key={u.id} label={u.name} value={u.id} />
+                ))}
+              </Picker>
+            </View>
+          </View>
+
+          <View style={[styles.pickerGroup, {flex: 1}]}>
+            <Text style={styles.label}>Laboratório *</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={form.laboratory}
+                onValueChange={(value) => handleFormChange('laboratory', value)}
+              >
+                <Picker.Item label="Selecione..." value="" />
+                {dropdownData.laboratories.map(lab => (
+                  <Picker.Item key={lab.id} label={lab.name} value={lab.id} />
+                ))}
+              </Picker>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.pickerGroup}>
+          <Text style={styles.label}>Uso do Produto *</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={form.productUse}
+              onValueChange={(value) => handleFormChange('productUse', value)}
+            >
+              <Picker.Item label="Selecione..." value="" />
+              {dropdownData.productUses.map(use => (
+                <Picker.Item key={use.id} label={use.name} value={use.id} />
+              ))}
+            </Picker>
+          </View>
+        </View>
+
+        <View style={styles.switchContainer}>
+          <Text style={styles.label}>Produto Controlado</Text>
+          <Switch
+            value={form.controlled}
+            onValueChange={(value) => handleFormChange('controlled', value)}
+            trackColor={{false: '#767577', true: '#81b0ff'}}
+            thumbColor={form.controlled ? '#f5dd4b' : '#f4f3f4'}
+          />
+        </View>
+
+        {/* Seção de Lotes */}
         <Text style={styles.sectionTitle}>Lotes</Text>
+        
         {batches.map((batch, index) => (
-          <View key={index} style={styles.itemRow}>
-            <Text style={styles.itemText}>
-              Lote: {batch.batch}, Validade: {batch.validity}, Total: {batch.amount_total}
-            </Text>
-            <TouchableOpacity onPress={() => removeBatch(index)}>
-              <Text style={styles.removeText}>Remover</Text>
+          <View key={index} style={styles.listItem}>
+            <View style={styles.itemContent}>
+              <Text style={styles.itemTitle}>Lote: {batch.batch}</Text>
+              <Text style={styles.itemDetail}>Validade: {batch.validity}</Text>
+              <Text style={styles.itemDetail}>Quantidade: {batch.amount_total}</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.removeButton}
+              onPress={() => removeItem(batches, setBatches, index)}
+            >
+              <Icon name="trash-2" size={18} color="#e74c3c" />
             </TouchableOpacity>
           </View>
         ))}
-        <TextInput
-          style={styles.input}
-          placeholder="Número do Lote"
-          value={newBatchNumber}
-          onChangeText={setNewBatchNumber}
-          keyboardType="numeric"
-        />
-        
-        <TouchableOpacity onPress={showDatepicker} style={styles.input}>
-          <Text style={newBatchValidity ? {} : {color: '#999'}}>
-            {newBatchValidity || 'Selecione a validade (AAAA-MM-DD)'}
-          </Text>
-        </TouchableOpacity>
-        
+
+        <View style={styles.row}>
+          <TextInput
+            style={[styles.input, {flex: 1, marginRight: 10}]}
+            placeholder="Número do Lote *"
+            value={newBatch.number}
+            onChangeText={(text) => setNewBatch({...newBatch, number: text})}
+          />
+          <TouchableOpacity 
+            style={[styles.input, {flex: 1, justifyContent: 'center'}]}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Text style={newBatch.validity ? styles.inputText : styles.placeholderText}>
+              {newBatch.validity || 'Validade *'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {showDatePicker && (
           <DateTimePicker
             value={selectedDate}
@@ -325,52 +346,74 @@ export default function RegisterProduct({navigation}) {
           />
         )}
 
-        <TextInput
-          style={styles.input}
-          placeholder="Entrada Total"
-          value={newBatchEntryTotal}
-          onChangeText={setNewBatchEntryTotal}
-          keyboardType="numeric"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Saída Total (Opcional)"
-          value={newBatchOutputTotal}
-          onChangeText={setNewBatchOutputTotal}
-          keyboardType="numeric"
-        />
-        <TouchableOpacity style={styles.addButton} onPress={handleAddBatch}>
-          <Text style={styles.buttonText}>Adicionar Lote</Text>
+        <View style={styles.row}>
+          <TextInput
+            style={[styles.input, {flex: 1, marginRight: 10}]}
+            placeholder="Entrada Total *"
+            value={newBatch.entryTotal}
+            onChangeText={(text) => setNewBatch({...newBatch, entryTotal: text})}
+            keyboardType="numeric"
+          />
+          <TextInput
+            style={[styles.input, {flex: 1}]}
+            placeholder="Saída Total"
+            value={newBatch.outputTotal}
+            onChangeText={(text) => setNewBatch({...newBatch, outputTotal: text})}
+            keyboardType="numeric"
+          />
+        </View>
+
+        <TouchableOpacity 
+          style={styles.secondaryButton}
+          onPress={handleAddBatch}
+        >
+          <Icon name="plus" size={18} color="#fff" />
+          <Text style={styles.secondaryButtonText}>Adicionar Lote</Text>
         </TouchableOpacity>
 
+        {/* Seção de Princípios Ativos */}
         <Text style={styles.sectionTitle}>Princípios Ativos</Text>
+        
         {activePrinciples.map((ap, index) => (
-          <View key={index} style={styles.itemRow}>
+          <View key={index} style={styles.listItem}>
             <Text style={styles.itemText}>{ap.name}</Text>
-            <TouchableOpacity onPress={() => removeActivePrinciple(index)}>
-              <Text style={styles.removeText}>Remover</Text>
+            <TouchableOpacity 
+              style={styles.removeButton}
+              onPress={() => removeItem(activePrinciples, setActivePrinciples, index)}
+            >
+              <Icon name="trash-2" size={18} color="#e74c3c" />
             </TouchableOpacity>
           </View>
         ))}
+
         <TextInput
           style={styles.input}
           placeholder="Nome do Princípio Ativo"
-          value={newActivePrincipleName}
-          onChangeText={setNewActivePrincipleName}
+          value={newActivePrinciple}
+          onChangeText={setNewActivePrinciple}
         />
-        <TouchableOpacity style={styles.addButton} onPress={handleAddActivePrinciple}>
-          <Text style={styles.buttonText}>Adicionar Princípio Ativo</Text>
+
+        <TouchableOpacity 
+          style={styles.secondaryButton}
+          onPress={handleAddActivePrinciple}
+        >
+          <Icon name="plus" size={18} color="#fff" />
+          <Text style={styles.secondaryButtonText}>Adicionar Princípio Ativo</Text>
         </TouchableOpacity>
 
+        {/* Botão de Salvar */}
         <TouchableOpacity
-          style={styles.button}
+          style={styles.primaryButton}
           onPress={handleSave}
           disabled={loading}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>Salvar Produto</Text>
+            <>
+              <Icon name="save" size={18} color="#fff" />
+              <Text style={styles.primaryButtonText}>Salvar Produto</Text>
+            </>
           )}
         </TouchableOpacity>
       </ScrollView>
@@ -381,106 +424,147 @@ export default function RegisterProduct({navigation}) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f6f9fc',
+    backgroundColor: '#f8f9fa',
   },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
   },
-  title: {
+  loadingText: {
+    marginTop: 10,
+    color: '#555',
+  },
+  scrollContainer: {
+    padding: 16,
+    paddingBottom: 30,
+  },
+  headerTitle: {
     fontSize: 22,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 25,
+    marginBottom: 20,
     textAlign: 'center',
   },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 20,
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
   input: {
-    height: 50,
-    borderColor: '#ddd',
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 15,
-    marginBottom: 15,
     backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    height: 48,
     fontSize: 16,
+    marginBottom: 16,
     justifyContent: 'center',
+  },
+  inputText: {
+    color: '#333',
+  },
+  placeholderText: {
+    color: '#999',
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#555',
+    marginBottom: 8,
+  },
+  pickerGroup: {
+    marginBottom: 16,
   },
   pickerContainer: {
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 8,
-    marginBottom: 15,
     overflow: 'hidden',
     backgroundColor: '#fff',
   },
-  picker: {
-    height: 50,
-    width: '100%',
-  },
-  label: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#444',
-    marginBottom: 8,
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   switchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
-    paddingHorizontal: 5,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    marginBottom: 16,
   },
-  button: {
-    backgroundColor: '#008000',
-    padding: 15,
+  listItem: {
+    backgroundColor: '#fff',
     borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 20,
-    elevation: 3,
-  },
-  addButton: {
-    backgroundColor: '#4e9bde',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 15,
-    elevation: 2,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#555',
-    marginTop: 25,
-    marginBottom: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    paddingBottom: 5,
-  },
-  itemRow: {
+    padding: 16,
+    marginBottom: 10,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#eef',
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 8,
-    borderLeftWidth: 5,
-    borderLeftColor: '#4e9bde',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  itemContent: {
+    flex: 1,
+  },
+  itemTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  itemDetail: {
+    fontSize: 14,
+    color: '#666',
   },
   itemText: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#333',
     flex: 1,
   },
-  removeText: {
-    color: 'red',
-    marginLeft: 10,
+  removeButton: {
+    padding: 8,
+  },
+  primaryButton: {
+    backgroundColor: '#e74c3c',
+    borderRadius: 8,
+    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 24,
+  },
+  primaryButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginLeft: 8,
+  },
+  secondaryButton: {
+    backgroundColor: '#3498db',
+    borderRadius: 8,
+    height: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  secondaryButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 15,
+    marginLeft: 8,
   },
 });

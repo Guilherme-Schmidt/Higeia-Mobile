@@ -3,8 +3,10 @@ import {
   View,
   Text,
   FlatList,
-  ActivityIndicator,
+  SafeAreaView,
   StyleSheet,
+  ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 import api from '../../api/api';
 
@@ -15,7 +17,7 @@ export default function ListLowStock() {
   const [temMais, setTemMais] = useState(true);
 
   useEffect(() => {
-    carregarProdutos(1); // começa pela página 1
+    carregarProdutos(1);
   }, [carregarProdutos]);
 
   const carregarProdutos = useCallback(async (paginaCarregar = 1) => {
@@ -47,15 +49,29 @@ export default function ListLowStock() {
   }, [carregando, temMais]);
 
   const renderItem = ({ item }) => (
-    <View style={styles.card}>
-      <Text style={styles.nome}>{item.name}</Text>
-      <Text style={styles.qtd}>Qtd: {item.amount}</Text>
-      <Text style={styles.falta}>Faltam: {item.missing}</Text>
+    <View style={[styles.card, styles.lowStockCard]}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.name}>{item.name}</Text>
+        <Text style={styles.badge}>Estoque Baixo</Text>
+      </View>
+      <Text style={styles.details}>Quantidade: {item.amount}</Text>
+      <Text style={[styles.details, styles.missingText]}>Faltam: {item.missing}</Text>
     </View>
   );
 
+  if (carregando && produtos.length === 0) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color="#e74c3c" />
+        <Text style={styles.loadingText}>Carregando produtos...</Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar backgroundColor="#e74c3c" barStyle="light-content" />
+
       <Text style={styles.titulo}>Estoque Baixo</Text>
 
       <FlatList
@@ -65,55 +81,88 @@ export default function ListLowStock() {
         onEndReached={() => carregarProdutos(pagina)}
         onEndReachedThreshold={0.2}
         ListEmptyComponent={
-          !carregando && (
-            <Text style={styles.vazio}>Nenhum item com estoque baixo.</Text>
-          )
+          !carregando && <Text style={styles.empty}>Nenhum item com estoque baixo.</Text>
         }
         ListFooterComponent={
-          carregando && <ActivityIndicator size="small" color="#0f0" />
+          carregando && <ActivityIndicator size="small" color="#e74c3c" />
         }
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
-    paddingHorizontal: 16,
+    backgroundColor: '#f8f9fa',
+  },
+  loading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 8,
+    fontSize: 16,
+    color: '#555',
   },
   titulo: {
-    color: '#0f0',
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
-    marginVertical: 20,
+    color: '#333',
+    margin: 16,
+    marginBottom: 8,
   },
   card: {
-    backgroundColor: '#111',
+    backgroundColor: '#fff',
     padding: 16,
-    borderRadius: 8,
-    marginBottom: 12,
-    borderColor: '#333',
-    borderWidth: 1,
+    borderRadius: 12,
+    marginVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  nome: {
+  lowStockCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#e74c3c',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  name: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  badge: {
+    backgroundColor: '#e74c3c',
     color: '#fff',
-    fontSize: 18,
+    fontSize: 12,
+    paddingVertical: 2,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    fontWeight: 'bold',
+    overflow: 'hidden',
+  },
+  details: {
+    fontSize: 14,
+    color: '#555',
+    marginTop: 2,
+  },
+  missingText: {
+    color: '#e74c3c',
     fontWeight: 'bold',
   },
-  qtd: {
-    color: '#ccc',
-    fontSize: 14,
-  },
-  falta: {
-    color: '#f55',
-    fontSize: 14,
-  },
-  vazio: {
+  empty: {
+    marginTop: 30,
     textAlign: 'center',
-    color: '#888',
-    marginTop: 20,
+    color: '#777',
+    fontSize: 14,
   },
 });

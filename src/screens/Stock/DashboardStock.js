@@ -5,6 +5,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  SafeAreaView,
+  StatusBar,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
@@ -25,30 +27,23 @@ export default function DashboardEstoque() {
     try {
       setLoading(true);
 
-      const [lowCountRes, highCountRes, countRes, lowListRes] =
-        await Promise.all([
-          api.get('/pharmacy/stock/low-count'),
-          api.get('/pharmacy/stock/high-count'),
-          api.get('/pharmacy/stock/count'),
-          api.get('/pharmacy/stock/low-list'),
-        ]);
+      const [lowCountRes, highCountRes, countRes] = await Promise.all([
+        api.get('/pharmacy/stock/low-count'),
+        api.get('/pharmacy/stock/high-count'),
+        api.get('/pharmacy/stock/count'),
+      ]);
 
-      const lowData = Array.isArray(lowCountRes.data)
-        ? lowCountRes.data[0]
-        : {};
+      const lowData = Array.isArray(lowCountRes.data) ? lowCountRes.data[0] : {};
       const estoqueBaixo = parseInt(lowData.low_count || 0, 10);
       const foraEstoque = parseInt(lowData.out_count || 0, 10);
       const abaixoMedia = estoqueBaixo - foraEstoque;
-
-      const estoqueAlto = parseInt(highCountRes.data || 0, 10);
-      const totalItens = parseInt(countRes.data || 0, 10);
 
       setDados({
         estoque_baixo: estoqueBaixo,
         abaixo_media: abaixoMedia,
         fora_estoque: foraEstoque,
-        estoque_alto: estoqueAlto,
-        total_itens: totalItens,
+        estoque_alto: parseInt(highCountRes.data || 0, 10),
+        total_itens: parseInt(countRes.data || 0, 10),
       });
     } catch (error) {
       console.error('Erro ao carregar dashboard:', error);
@@ -65,83 +60,148 @@ export default function DashboardEstoque() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#0f0" />
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color="#e74c3c" />
+        <Text style={styles.loadingText}>Carregando dados...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar backgroundColor="#e74c3c" barStyle="light-content" />
+      
       {/* Estoque Baixo */}
-      <View style={styles.card}>
-        <Text style={styles.title}>Estoque Baixo</Text>
-        <Text style={styles.valor}>{dados.estoque_baixo} itens ↓</Text>
-        <Text style={styles.info}>{dados.abaixo_media} abaixo da média</Text>
-        <Text style={styles.info}>{dados.fora_estoque} fora de estoque</Text>
+      <View style={[styles.card, styles.lowStockCard]}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.title}>Estoque Baixo</Text>
+          <Text style={styles.badge}>{dados.estoque_baixo} itens ↓</Text>
+        </View>
+        <Text style={styles.details}>• {dados.abaixo_media} abaixo da média</Text>
+        <Text style={styles.details}>• {dados.fora_estoque} fora de estoque</Text>
         <TouchableOpacity
-          style={styles.botao}
+          style={styles.button}
           onPress={() => navigation.navigate('ListLowStock')}>
           <Icon name="eye" size={16} color="#fff" />
-          <Text style={styles.botaoTexto}>Ver Detalhes</Text>
+          <Text style={styles.buttonText}>Ver Detalhes</Text>
         </TouchableOpacity>
       </View>
 
       {/* Estoque Alto */}
-      <View style={styles.card}>
-        <Text style={styles.title}>Estoque Alto</Text>
-        <Text style={styles.valor}>{dados.estoque_alto} itens ↑</Text>
-        <Text style={styles.info}>acima da média</Text>
+      <View style={[styles.card, styles.highStockCard]}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.title}>Estoque Alto</Text>
+          <Text style={styles.badgeGreen}>{dados.estoque_alto} itens ↑</Text>
+        </View>
+        <Text style={styles.details}>• Acima da média</Text>
       </View>
 
       {/* Total de Itens */}
       <View style={styles.card}>
-        <Text style={styles.title}>Total de Itens</Text>
-        <Text style={styles.valor}>{dados.total_itens} itens ▒▒▒</Text>
+        <View style={styles.cardHeader}>
+          <Text style={styles.title}>Total de Itens</Text>
+          <Text style={styles.badgeNeutral}>{dados.total_itens} itens</Text>
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
-    backgroundColor: '#f1f3f9',
     flex: 1,
+    backgroundColor: '#f8f9fa',
+    padding: 16,
+  },
+  loading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+  },
+  loadingText: {
+    marginTop: 8,
+    fontSize: 16,
+    color: '#555',
   },
   card: {
-    backgroundColor: '#1e1e1e',
-    borderRadius: 10,
-    padding: 20,
-    marginBottom: 20,
-    elevation: 3,
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 12,
+    marginVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  lowStockCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#e74c3c',
+  },
+  highStockCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#2ecc71',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
   },
   title: {
-    color: '#fff',
+    fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 10,
+    color: '#333',
   },
-  valor: {
-    fontSize: 22,
+  badge: {
+    backgroundColor: '#e74c3c',
     color: '#fff',
+    fontSize: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 10,
     fontWeight: 'bold',
+    overflow: 'hidden',
   },
-  info: {
-    color: '#ccc',
-    marginTop: 5,
+  badgeGreen: {
+    backgroundColor: '#2ecc71',
+    color: '#fff',
+    fontSize: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    fontWeight: 'bold',
+    overflow: 'hidden',
   },
-  botao: {
-    marginTop: 10,
-    backgroundColor: '#28a745',
+  badgeNeutral: {
+    backgroundColor: '#3498db',
+    color: '#fff',
+    fontSize: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    fontWeight: 'bold',
+    overflow: 'hidden',
+  },
+  details: {
+    fontSize: 14,
+    color: '#555',
+    marginTop: 4,
+  },
+  button: {
+    backgroundColor: '#e74c3c',
     padding: 10,
+    borderRadius: 6,
+    marginTop: 12,
     flexDirection: 'row',
-    borderRadius: 5,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
   },
-  botaoTexto: {
+  buttonText: {
     color: '#fff',
     marginLeft: 8,
     fontWeight: 'bold',
+    fontSize: 14,
   },
 });

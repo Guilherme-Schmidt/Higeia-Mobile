@@ -1,7 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, SafeAreaView, StyleSheet, ActivityIndicator, Alert, StatusBar, TextInput, TouchableOpacity } from 'react-native';
-import api from '../../api/api';
+import {
+  View,
+  Text,
+  FlatList,
+  SafeAreaView,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+  StatusBar,
+  TextInput,
+  TouchableOpacity,
+} from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import api from '../../api/api';
 
 export default function ProductList() {
   const [products, setProducts] = useState([]);
@@ -16,7 +27,6 @@ export default function ProductList() {
     setLoading(true);
     try {
       const response = await api.get('/pharmacy/product', { params: { query } });
-
       if (response.data.items) {
         setProducts(response.data.items);
       } else if (response.data.data) {
@@ -39,16 +49,16 @@ export default function ProductList() {
   if (loading) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#4e9bde" />
-        <Text style={{ marginTop: 8, fontSize: 16 }}>Carregando produtos...</Text>
+        <ActivityIndicator size="large" color="#e74c3c" />
+        <Text style={styles.loadingText}>Carregando produtos...</Text>
       </View>
     );
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor="#4e9bde" barStyle="light-content" />
-      
+      <StatusBar backgroundColor="#e74c3c" barStyle="light-content" />
+
       {/* Campo de busca */}
       <View style={styles.searchContainer}>
         <TextInput
@@ -56,6 +66,7 @@ export default function ProductList() {
           placeholder="Buscar produto..."
           value={searchQuery}
           onChangeText={setSearchQuery}
+          placeholderTextColor="#999"
         />
         <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
           <Ionicons name="search" size={20} color="#fff" />
@@ -86,67 +97,75 @@ export default function ProductList() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8f9fa',
   },
   loading: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  loadingText: {
+    marginTop: 8,
+    fontSize: 16,
+    color: '#555',
+  },
   searchContainer: {
     flexDirection: 'row',
     margin: 16,
-    borderRadius: 8,
     backgroundColor: '#fff',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#ddd',
+    overflow: 'hidden',
     alignItems: 'center',
-    paddingHorizontal: 0,
   },
   searchInput: {
     flex: 1,
-    height: 40,
-    paddingHorizontal: 20,
+    height: 44,
+    paddingHorizontal: 16,
+    color: '#333',
   },
   searchButton: {
-    backgroundColor: '#008000',
-    padding: 10,
-    borderRadius: 6,
-    marginLeft:5,
+    backgroundColor: '#e74c3c',
+    padding: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   card: {
-    padding: 14,
-    marginVertical: 8,
     backgroundColor: '#fff',
-    borderRadius: 10,
-    elevation: 2,
+    padding: 16,
+    borderRadius: 12,
+    marginVertical: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  lowStockCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#e74c3c',
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  badge: {
-    backgroundColor: '#ff4d4d',
-    color: '#fff',
-    fontSize: 12,
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-    borderRadius: 10,
-    fontWeight: 'bold',
-  },
-  lowStockCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: '#ff4d4d',
+    marginBottom: 6,
   },
   name: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
+  },
+  badge: {
+    backgroundColor: '#e74c3c',
+    color: '#fff',
+    fontSize: 12,
+    paddingVertical: 2,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    fontWeight: 'bold',
+    overflow: 'hidden',
   },
   details: {
     fontSize: 14,
