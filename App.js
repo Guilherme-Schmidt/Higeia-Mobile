@@ -31,6 +31,7 @@ import AnimalHospitalizationHistory from './src/screens/Appointments/AnimalHospi
 import HospitalizationDetailScreen from './src/screens/Appointments/HospitalizationDetailScreen';
 import AddHospitalizationRecordScreen from './src/screens/Appointments/AddHospitalizationRecordScreen';
 import RecordDetailScreen from './src/screens/Appointments/RecordDetailScreen';
+import RegisterProductOutput from './src/screens/Products/RegisterProductOutput';
 
 const Stack = createStackNavigator();
 const Drawer = createDrawerNavigator();

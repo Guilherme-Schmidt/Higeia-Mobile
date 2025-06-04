@@ -160,7 +160,7 @@ export default function ProductEntry({navigation}) {
       <StatusBar backgroundColor="#e74c3c" barStyle="light-content" />
       
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <Text style={styles.headerTitle}>Lançar Entrada de Produto</Text>
+    
 
         {/* Seção de Dados da Entrada */}
         <Text style={styles.sectionTitle}>Dados da Entrada</Text>

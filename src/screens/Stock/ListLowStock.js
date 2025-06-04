@@ -20,7 +20,7 @@ export default function ListLowStock() {
     carregarProdutos(1);
   }, [carregarProdutos]);
 
-  const carregarProdutos = useCallback(async (paginaCarregar = 1) => {
+  const carregarProdutos = useCallback(async (paginaCarregar = 0) => {
     if (carregando || !temMais) return;
 
     setCarregando(true);
