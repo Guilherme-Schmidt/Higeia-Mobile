@@ -1,258 +1,226 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  Alert,
+  FlatList,
   StyleSheet,
-  SafeAreaView,
-  StatusBar,
-  ScrollView,
+  Alert,
   ActivityIndicator,
-  Platform,
+  SafeAreaView,
+  Modal,
+  ScrollView,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
+import { Picker } from '@react-native-picker/picker';
 import api from '../../api/api';
-import {Picker} from '@react-native-picker/picker';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
-export default function RegisterProductOutput({navigation}) {
-  const [form, setForm] = useState({
+const RegisterProductOutput = () => {
+  // Estados principais
+  const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState([]);
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [animals, setAnimals] = useState([]);
+  
+  // Estados do formulário
+  const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
-    animal_id: '',
-    withdrawn_by_id: '',
-    sector_id: '',
-    total: '',
-    products: []
+    animal_id: null,
+    withdrawn_by_id: null,
+    total: 0,
   });
-  const [newProduct, setNewProduct] = useState({
-    product_id: '',
-    amount: ''
-  });
-  const [dropdownData, setDropdownData] = useState({
-    animals: [],
-    employees: [],
-    sectors: [],
-    products: []
-  });
-  const [loading, setLoading] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  
+  // Estados para busca e seleção
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [currentProduct, setCurrentProduct] = useState(null);
+  const [productAmount, setProductAmount] = useState('');
 
+  // Carrega dados iniciais
   useEffect(() => {
-    loadDropdownData();
+    const loadInitialData = async () => {
+      try {
+        setLoading(true);
+        
+        // Carrega produtos
+        const productsRes = await api.get('/pharmacy/product');
+        setProducts(productsRes.data.items || []);
+  
+        
+        // Carrega funcionários
+        const employeesRes = await api.get('/reg/employee');
+        setEmployees(employeesRes.data.items || []);
+        
+        // // Carrega animais (se aplicável)
+         const response = await api.get('/reg/animal');
+        setAnimals(response.data.items || response.data || []);
+        
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+        Alert.alert('Erro', 'Não foi possível carregar os dados iniciais');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadInitialData();
   }, []);
 
-  async function loadDropdownData() {
-    try {
-      setLoading(true);
-      const [animalsRes, employeesRes, sectorsRes, productsRes] = await Promise.all([
-        api.get('/reg/animal'),
-        api.get('/reg/employee'),
-        api.get('/pharmacy/product-output/sectors'),
-        api.get('/pharmacy/product')
-      ]);
-
-      setDropdownData({
-        animals: animalsRes.data?.items || [],
-        employees: employeesRes.data?.items || [],
-        sectors: sectorsRes.data?.items || [],
-        products: productsRes.data?.items || []
-      });
-    } catch (error) {
-      console.error('Erro ao carregar dados:', error);
-      Alert.alert('Erro', 'Não foi possível carregar os dados necessários.');
-    } finally {
-      setLoading(false);
-    }
-  }
-
+  // Adiciona produto à lista de selecionados
   const handleAddProduct = () => {
-    if (!newProduct.product_id || !newProduct.amount) {
-      Alert.alert('Atenção', 'Selecione um produto e informe a quantidade');
-      return;
-    }
-    
-    const selectedProduct = dropdownData.products.find(p => p.id === newProduct.product_id);
-    
-    const product = {
-      product_id: newProduct.product_id,
-      product_name: selectedProduct.name,
-      amount: parseInt(newProduct.amount),
-      unit: selectedProduct.unit?.name || 'un'
-    };
-    
-    setForm({
-      ...form,
-      products: [...form.products, product],
-      total: (parseFloat(form.total || 0) + (parseInt(newProduct.amount) * (selectedProduct.price || 0)).toString()
-    )});
-    
-    setNewProduct({
-      product_id: '',
-      amount: ''
-    });
-  };
-
-  const removeProduct = (index) => {
-    const updatedProducts = [...form.products];
-    const removedProduct = updatedProducts.splice(index, 1)[0];
-    
-    // Atualizar o total
-    const selectedProduct = dropdownData.products.find(p => p.id === removedProduct.product_id);
-    const newTotal = parseFloat(form.total) - (parseInt(removedProduct.amount) * (selectedProduct.price || 0));
-    
-    setForm({
-      ...form,
-      products: updatedProducts,
-      total: newTotal > 0 ? newTotal.toString() : ''
-    });
-  };
-
-  const handleDateChange = (event, date) => {
-    setShowDatePicker(Platform.OS === 'ios');
-    if (date) {
-      setSelectedDate(date);
-      setForm({...form, date: date.toISOString().split('T')[0]});
-    }
-  };
-
-  async function handleSave() {
-    const requiredFields = [
-      {field: 'sector_id', label: 'Setor de destino'},
-      {field: 'withdrawn_by_id', label: 'Responsável pela retirada'},
-      {field: 'products', label: 'Produtos'}
-    ];
-
-    const missingField = requiredFields.find(f => {
-      if (f.field === 'products') return form.products.length === 0;
-      return !form[f.field];
-    });
-    
-    if (missingField) {
-      Alert.alert('Atenção', `Preencha o campo: ${missingField.label}`);
+    if (!currentProduct || !productAmount || isNaN(productAmount) || Number(productAmount) <= 0) {
+      Alert.alert('Atenção', 'Selecione um produto e informe uma quantidade válida');
       return;
     }
 
-    const payload = {
-      ...form,
-      products: form.products.map(p => ({
-        product_id: p.product_id,
-        amount: p.amount
-      }))
+    const newProduct = {
+      product_id: currentProduct.id,
+      amount: Number(productAmount),
+      product: currentProduct, // Mantemos a referência para exibição
     };
+
+    setSelectedProducts([...selectedProducts, newProduct]);
+    setCurrentProduct(null);
+    setProductAmount('');
+    setShowProductModal(false);
+  };
+
+  // Remove produto da lista
+  const handleRemoveProduct = (productId) => {
+    setSelectedProducts(selectedProducts.filter(p => p.product_id !== productId));
+  };
+
+  // Submete o formulário
+  const handleSubmit = async () => {
+    if (!formData.withdrawn_by_id || selectedProducts.length === 0) {
+      Alert.alert('Atenção', 'Preencha todos os campos obrigatórios e adicione pelo menos um produto');
+      return;
+    }
 
     try {
       setLoading(true);
+      
+      const payload = {
+        ...formData,
+        products: selectedProducts.map(p => ({
+          product_id: p.product_id,
+          amount: p.amount,
+          // Adicione outros campos necessários como unit_id, batch, etc.
+        })),
+      };
+
       const response = await api.post('/pharmacy/product-output', payload);
-
-      if (response.data?.Error === "Not create") {
-        const errorMessage = response.data.Error_Message 
-          ? Object.values(response.data.Error_Message).join('\n') 
-          : 'Não foi possível registrar a saída.';
-        throw new Error(errorMessage);
+      
+      if (response.data.status === 'success') {
+        Alert.alert('Sucesso', 'Saída de produtos registrada com sucesso');
+        // Limpa o formulário após sucesso
+        setSelectedProducts([]);
+        setFormData({
+          ...formData,
+          animal_id: null,
+          total: 0,
+        });
+      } else {
+        throw new Error(response.data.message || 'Erro ao registrar saída');
       }
-
-      Alert.alert('Sucesso', 'Saída de produtos registrada com sucesso!', [
-        {text: 'OK', onPress: () => navigation.goBack()}
-      ]);
     } catch (error) {
       console.error('Erro ao registrar saída:', error);
-      Alert.alert(
-        'Erro', 
-        error.response?.data?.message || 
-        error.message || 
-        'Erro ao registrar saída de produtos'
-      );
+      Alert.alert('Erro', 'Não foi possível registrar a saída de produtos');
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  if (loading && dropdownData.sectors.length === 0) {
+  // Renderização do item do produto
+  const renderProductItem = ({ item }) => (
+    <TouchableOpacity 
+      style={styles.productItem}
+      onPress={() => {
+        setCurrentProduct(item);
+        setShowProductModal(true);
+      }}
+    >
+      <Text style={styles.productName}>{item.name}</Text>
+      <Text style={styles.productStock}>Estoque: {item.amount}</Text>
+    </TouchableOpacity>
+  );
+
+  // Renderização do produto selecionado
+  const renderSelectedProduct = (product) => (
+    <View style={styles.selectedProductItem} key={product.product_id}>
+      <View style={styles.selectedProductInfo}>
+        <Text style={styles.selectedProductName}>{product.product.name}</Text>
+        <Text style={styles.selectedProductAmount}>Quantidade: {product.amount}</Text>
+      </View>
+      <TouchableOpacity 
+        style={styles.removeButton}
+        onPress={() => handleRemoveProduct(product.product_id)}
+      >
+        <Ionicons name="trash-outline" size={20} color="#e74c3c" />
+      </TouchableOpacity>
+    </View>
+  );
+
+  if (loading) {
     return (
-      <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#e74c3c" />
-        <Text style={styles.loadingText}>Carregando dados...</Text>
-      </SafeAreaView>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#3498db" />
+      </View>
     );
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor="#e74c3c" barStyle="light-content" />
-      
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <Text style={styles.headerTitle}>Registro de Saída de Produtos</Text>
-
-        {/* Informações da Saída */}
-        <Text style={styles.sectionTitle}>Informações da Saída</Text>
+        <Text style={styles.title}>Registro de Saída de Produtos</Text>
         
-        <TouchableOpacity 
-          style={styles.input}
-          onPress={() => setShowDatePicker(true)}
-        >
-          <Text style={form.date ? styles.inputText : styles.placeholderText}>
-            {form.date || 'Data da saída *'}
-          </Text>
-        </TouchableOpacity>
-
-        {showDatePicker && (
-          <DateTimePicker
-            value={selectedDate}
-            mode="date"
-            display="default"
-            onChange={handleDateChange}
+        {/* Formulário principal */}
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Data</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.date}
+            onChangeText={(text) => setFormData({...formData, date: text})}
+            placeholder="Data da saída"
           />
-        )}
-
-        <View style={styles.pickerGroup}>
-          <Text style={styles.label}>Setor de Destino *</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={form.sector_id}
-              onValueChange={(value) => setForm({...form, sector_id: value})}
-            >
-              <Picker.Item label="Selecione o setor..." value="" />
-              {dropdownData.sectors.map(sector => (
-                <Picker.Item key={sector.id} label={sector.name} value={sector.id} />
-              ))}
-            </Picker>
-          </View>
         </View>
 
-        <View style={styles.pickerGroup}>
-          <Text style={styles.label}>Responsável pela Retirada *</Text>
+
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Responsável pela Retirada*</Text>
           <View style={styles.pickerContainer}>
             <Picker
-              selectedValue={form.withdrawn_by_id}
-              onValueChange={(value) => setForm({...form, withdrawn_by_id: value})}
+              selectedValue={formData.withdrawn_by_id}
+              onValueChange={(value) => setFormData({...formData, withdrawn_by_id: value})}
+              style={styles.picker}
             >
-              <Picker.Item label="Selecione o responsável..." value="" />
-              {dropdownData.employees.map(emp => (
+              <Picker.Item label="Selecione um funcionário..." value={null} />
+              {employees.map(employee => (
                 <Picker.Item 
-                  key={emp.id} 
-                  label={`${emp.person?.name} (${emp.role})`} 
-                  value={emp.id} 
+                  key={employee.id} 
+                  label={`${employee.name}`} 
+                  value={employee.id} 
                 />
               ))}
             </Picker>
           </View>
         </View>
 
-        <View style={styles.pickerGroup}>
+        <View style={styles.formGroup}>
           <Text style={styles.label}>Animal (opcional)</Text>
           <View style={styles.pickerContainer}>
             <Picker
-              selectedValue={form.animal_id}
-              onValueChange={(value) => setForm({...form, animal_id: value})}
+              selectedValue={formData.animal_id}
+              onValueChange={(value) => setFormData({...formData, animal_id: value})}
+              style={styles.picker}
             >
-              <Picker.Item label="Selecione o animal..." value="" />
-              {dropdownData.animals.map(animal => (
+              <Picker.Item label="Selecione um animal..." value={null} />
+              {animals.map(animal => (
                 <Picker.Item 
                   key={animal.id} 
-                  label={`${animal.name} (${animal.species})`} 
+                  label={animal.name || `Animal ${animal.id}`} 
                   value={animal.id} 
                 />
               ))}
@@ -260,245 +228,283 @@ export default function RegisterProductOutput({navigation}) {
           </View>
         </View>
 
-        {/* Produtos */}
-        <Text style={styles.sectionTitle}>Produtos</Text>
-        
-        {form.products.map((product, index) => (
-          <View key={index} style={styles.listItem}>
-            <View style={styles.itemContent}>
-              <Text style={styles.itemTitle}>{product.product_name}</Text>
-              <Text style={styles.itemDetail}>
-                {product.amount} {product.unit}
-              </Text>
-            </View>
-            <TouchableOpacity 
-              style={styles.removeButton}
-              onPress={() => removeProduct(index)}
-            >
-              <Icon name="trash-2" size={18} color="#e74c3c" />
-            </TouchableOpacity>
+        {/* Lista de produtos selecionados */}
+        <Text style={styles.sectionTitle}>Produtos para Saída</Text>
+        {selectedProducts.length > 0 ? (
+          <View style={styles.selectedProductsContainer}>
+            {selectedProducts.map(renderSelectedProduct)}
           </View>
-        ))}
+        ) : (
+          <Text style={styles.emptyText}>Nenhum produto selecionado</Text>
+        )}
 
-        <View style={styles.row}>
-          <View style={[styles.pickerGroup, {flex: 1, marginRight: 10}]}>
-            <Text style={styles.label}>Produto *</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={newProduct.product_id}
-                onValueChange={(value) => setNewProduct({...newProduct, product_id: value})}
-              >
-                <Picker.Item label="Selecione o produto..." value="" />
-                {dropdownData.products.map(product => (
-                  <Picker.Item 
-                    key={product.id} 
-                    label={`${product.name} (${product.unit?.name || 'un'})`} 
-                    value={product.id} 
-                  />
-                ))}
-              </Picker>
-            </View>
-          </View>
-
-          <View style={[styles.inputGroup, {flex: 1}]}>
-            <Text style={styles.label}>Quantidade *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Qtd"
-              value={newProduct.amount}
-              onChangeText={(text) => setNewProduct({...newProduct, amount: text})}
-              keyboardType="numeric"
-            />
-          </View>
-        </View>
-
-        <TouchableOpacity 
-          style={styles.secondaryButton}
-          onPress={handleAddProduct}
+        {/* Botão para adicionar produtos */}
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => setShowProductModal(true)}
         >
-          <Icon name="plus" size={18} color="#fff" />
-          <Text style={styles.secondaryButtonText}>Adicionar Produto</Text>
+          <Text style={styles.addButtonText}>Adicionar Produtos</Text>
         </TouchableOpacity>
 
-        {/* Total */}
-        <View style={styles.totalContainer}>
-          <Text style={styles.totalLabel}>Total:</Text>
-          <Text style={styles.totalValue}>R$ {parseFloat(form.total || 0).toFixed(2)}</Text>
-        </View>
-
-        {/* Botão de Salvar */}
+        {/* Botão de submeter */}
         <TouchableOpacity
-          style={styles.primaryButton}
-          onPress={handleSave}
+          style={styles.submitButton}
+          onPress={handleSubmit}
           disabled={loading}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <>
-              <Icon name="save" size={18} color="#fff" />
-              <Text style={styles.primaryButtonText}>Registrar Saída</Text>
-            </>
+            <Text style={styles.submitButtonText}>Registrar Saída</Text>
           )}
         </TouchableOpacity>
+
+        {/* Modal de seleção de produtos */}
+        <Modal
+          visible={showProductModal}
+          animationType="slide"
+          transparent={false}
+          onRequestClose={() => setShowProductModal(false)}
+        >
+          <SafeAreaView style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Selecionar Produto</Text>
+              <TouchableOpacity onPress={() => setShowProductModal(false)}>
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Buscar produto..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor="#999"
+            />
+
+            <FlatList
+              data={products.filter(p => 
+                p.name.toLowerCase().includes(searchQuery.toLowerCase())
+              )}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={renderProductItem}
+              contentContainerStyle={styles.productList}
+            />
+
+            {currentProduct && (
+              <View style={styles.productForm}>
+                <Text style={styles.selectedProductText}>
+                  Selecionado: {currentProduct.name}
+                </Text>
+                <TextInput
+                  style={styles.amountInput}
+                  placeholder="Quantidade"
+                  value={productAmount}
+                  onChangeText={setProductAmount}
+                  keyboardType="numeric"
+                />
+                <TouchableOpacity
+                  style={styles.confirmButton}
+                  onPress={handleAddProduct}
+                >
+                  <Text style={styles.confirmButtonText}>Confirmar</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </SafeAreaView>
+        </Modal>
       </ScrollView>
     </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
+  scrollContainer: {
+    padding: 16,
+    paddingBottom: 32,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
   },
-  loadingText: {
-    marginTop: 10,
-    color: '#555',
-  },
-  scrollContainer: {
-    padding: 16,
-    paddingBottom: 30,
-  },
-  headerTitle: {
+  title: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 20,
+    color: '#333',
     textAlign: 'center',
+  },
+  formGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 16,
+    marginBottom: 8,
+    color: '#555',
+  },
+  input: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  pickerContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    overflow: 'hidden',
+  },
+  picker: {
+    height: 50,
+    width: '100%',
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
     marginTop: 20,
-    marginBottom: 12,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  input: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    height: 48,
-    fontSize: 16,
-    marginBottom: 16,
-    justifyContent: 'center',
-  },
-  inputText: {
+    marginBottom: 10,
     color: '#333',
   },
-  placeholderText: {
-    color: '#999',
-  },
-  inputGroup: {
+  selectedProductsContainer: {
     marginBottom: 16,
   },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#555',
+  selectedProductItem: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 8,
     marginBottom: 8,
-  },
-  pickerGroup: {
-    marginBottom: 16,
-  },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: '#fff',
-  },
-  row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-  },
-  listItem: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 10,
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
+    borderLeftWidth: 4,
+    borderLeftColor: '#3498db',
   },
-  itemContent: {
+  selectedProductInfo: {
     flex: 1,
   },
-  itemTitle: {
+  selectedProductName: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '500',
     color: '#333',
-    marginBottom: 4,
   },
-  itemDetail: {
+  selectedProductAmount: {
     fontSize: 14,
-    color: '#666',
+    color: '#555',
+    marginTop: 4,
   },
   removeButton: {
     padding: 8,
   },
-  primaryButton: {
-    backgroundColor: '#e74c3c',
+  emptyText: {
+    textAlign: 'center',
+    color: '#777',
+    marginVertical: 16,
+  },
+  addButton: {
+    backgroundColor: '#3498db',
+    padding: 14,
     borderRadius: 8,
-    height: 48,
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    marginTop: 8,
+  },
+  addButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  submitButton: {
+    backgroundColor: '#2ecc71',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
     marginTop: 24,
   },
-  primaryButtonText: {
+  submitButtonText: {
     color: '#fff',
+    fontSize: 18,
     fontWeight: 'bold',
-    fontSize: 16,
-    marginLeft: 8,
   },
-  secondaryButton: {
-    backgroundColor: '#3498db',
-    borderRadius: 8,
-    height: 44,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+    padding: 16,
   },
-  secondaryButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 15,
-    marginLeft: 8,
-  },
-  totalContainer: {
+  modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 16,
-    marginTop: 10,
+    marginBottom: 16,
   },
-  totalLabel: {
-    fontSize: 16,
+  modalTitle: {
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
   },
-  totalValue: {
-    fontSize: 18,
+  searchInput: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    marginBottom: 16,
+  },
+  productList: {
+    paddingBottom: 16,
+  },
+  productItem: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  productName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+  },
+  productStock: {
+    fontSize: 14,
+    color: '#555',
+    marginTop: 4,
+  },
+  productForm: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  selectedProductText: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 12,
+    color: '#333',
+  },
+  amountInput: {
+    backgroundColor: '#f8f9fa',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    marginBottom: 16,
+  },
+  confirmButton: {
+    backgroundColor: '#2ecc71',
+    padding: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  confirmButtonText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: 'bold',
-    color: '#e74c3c',
   },
 });
+
+export default RegisterProductOutput;

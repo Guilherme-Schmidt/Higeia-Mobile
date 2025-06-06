@@ -54,6 +54,7 @@ const ProdutosNavigator = () => (
     <Stack.Screen name="ListProductEntry" component={ListProductEntry} />
     <Stack.Screen name="DashboardStock" component={DashboardStock} />
     <Stack.Screen name="ListLowStock" component={ListLowStock} />
+    <Stack.Screen name="SaidaProduto" component={RegisterProductOutput} />
   </Stack.Navigator>
 );
 
@@ -249,6 +250,7 @@ const CustomDrawerContent = ({ navigation, ...props }) => {
         { label: 'Produtos', icon: 'pills', screen: 'Produtos', route: 'ProductList' },
         { label: 'Cadastrar Produto', icon: 'plus-circle', screen: 'Produtos', route: 'CadastrarProduto' },
         { label: 'Entrada de Produtos', icon: 'box-open', screen: 'Produtos', route: 'EntradaProduto' },
+        { label: 'Saída de Produtos', icon: 'sign-out-alt', screen: 'Produtos', route: 'SaidaProduto' },
       ],
     },
     {

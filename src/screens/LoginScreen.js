@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
-import Icon from 'react-native-vector-icons/FontAwesome5'; // Importando o ícone de pata
-
+import api from '../api/api'
+import Icon from 'react-native-vector-icons/FontAwesome5';
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -12,7 +11,7 @@ const LoginScreen = ({ navigation }) => {
   const handleLogin = async () => {
     setLoading(true);
     try {
-      const response = await axios.post('http://10.0.2.2:8000/api/login', {
+      const response = await api.post('/login', {
         email,
         password,
       });
