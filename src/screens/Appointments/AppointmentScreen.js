@@ -14,19 +14,17 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   Platform,
-  TouchableWithoutFeedback, // Added for dismissing dropdown
-  Keyboard // Added for dismissing keyboard
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import api from '../../api/api'; // Ensure this path is correct
+import api from '../../api/api';
 
 const APPOINTMENT_TYPES = ['consulta', 'cirurgia', 'vacina'];
 
 const AppointmentScreen = () => {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [modalVisible, setModalVisible] = useState(false); // Main appointment form modal
+  const [modalVisible, setModalVisible] = useState(false);
 
   const [showDateRangePicker, setShowDateRangePicker] = useState(false);
   const [dateRangePickerField, setDateRangePickerField] = useState(null);
@@ -37,11 +35,11 @@ const AppointmentScreen = () => {
 
   const [animalData, setAnimalData] = useState({
     loading: false,
-    animals: [], // Original full list of animals
-    filteredAnimals: [] // List of animals after client-side filtering
+    animals: [], 
+    filteredAnimals: [] 
   });
-  const [showAnimalSelectionModal, setShowAnimalSelectionModal] = useState(false); // New state for animal modal
-  const [animalSearchInput, setAnimalSearchInput] = useState(''); // State for search input inside animal modal
+  const [showAnimalSelectionModal, setShowAnimalSelectionModal] = useState(false);
+  const [animalSearchInput, setAnimalSearchInput] = useState(''); 
 
   const [teamMembers, setTeamMembers] = useState({
     employees: [],
@@ -146,9 +144,8 @@ const AppointmentScreen = () => {
     }
   };
 
-  // Debounced filter for animals in the selection modal
   const handleAnimalSearchChange = (text) => {
-    setAnimalSearchInput(text); // Update the input field immediately
+    setAnimalSearchInput(text);
 
     if (debounceAnimalSearchRef.current) {
       clearTimeout(debounceAnimalSearchRef.current);
@@ -157,7 +154,7 @@ const AppointmentScreen = () => {
     debounceAnimalSearchRef.current = setTimeout(() => {
       setAnimalData(prev => {
         if (!text) {
-          return {...prev, filteredAnimals: prev.animals}; // Reset to full list if search is empty
+          return {...prev, filteredAnimals: prev.animals};
         }
 
         const filtered = prev.animals.filter(animal =>
@@ -166,7 +163,7 @@ const AppointmentScreen = () => {
         );
         return {...prev, filteredAnimals: filtered};
       });
-    }, 300); // Debounce time for filtering
+    }, 300);
   };
 
   const selectAnimal = (animal) => {
@@ -175,9 +172,9 @@ const AppointmentScreen = () => {
       animal_id: animal.id,
       animalDisplayName: `${animal.name} (${animal.owner_name || 'Sem dono'})`
     }));
-    setShowAnimalSelectionModal(false); // Close the animal selection modal
-    setAnimalSearchInput(''); // Clear search for next time
-    setAnimalData(prev => ({...prev, filteredAnimals: prev.animals})); // Reset filtered list
+    setShowAnimalSelectionModal(false);
+    setAnimalSearchInput('');
+    setAnimalData(prev => ({...prev, filteredAnimals: prev.animals}));
   };
 
   const handleFormDateChange = (event, selected) => {
@@ -210,7 +207,6 @@ const AppointmentScreen = () => {
       } else if (dateRangePickerField === 'endDate') {
         setDateRange(prev => ({...prev, endDate: selected}));
       }
-      // Load appointments immediately after changing date range
       loadAppointments();
     }
     setShowDateRangePicker(false);
@@ -224,7 +220,6 @@ const AppointmentScreen = () => {
   const selectTeamMember = (member) => {
     setForm(prev => ({
       ...prev,
-      // Prevent duplicate members from being added based on member_id
       team: [...prev.team.filter(m => m.member_id !== member.member_id), {
         member_type: member.member_type.toLowerCase(),
         member_id: member.member_id,
@@ -248,14 +243,14 @@ const AppointmentScreen = () => {
     return;
   }
   try {
-    console.log('Sending form data:', form); // <--- ADD THIS LINE
+    console.log('Sending form data:', form);
     await api.post('/clinic/appointment', form);
     setModalVisible(false);
     resetForm();
     loadAppointments();
     Alert.alert('Sucesso', 'Consulta agendada com sucesso!');
   } catch (error) {
-    console.error('Erro ao agendar:', error.response?.data || error.message || error); // <--- IMPROVED ERROR LOGGING
+    console.error('Erro ao agendar:', error.response?.data || error.message || error);
     Alert.alert('Erro', error.response?.data?.message || 'Erro ao agendar consulta');
   }
 };
@@ -273,47 +268,47 @@ const AppointmentScreen = () => {
   };
 
   const renderAppointment = ({ item }) => (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <Text style={styles.cardTime}>
-          {item.hour ? item.hour.substring(0, 5) : '--:--'}
-        </Text>
-        <Text style={styles.cardType}>
-          {item.typeointments || ''}
-        </Text>
-      </View>
-
-      <Text style={styles.cardTitle}>
-        {item.animal?.name || 'Animal não especificado'}
+  <View style={styles.card}>
+    <View style={styles.cardHeader}>
+      <Text style={styles.cardTime}>
+        {item.hour ? item.hour.substring(0, 5) : '--:--'}
       </Text>
-
-      <Text style={styles.cardOwner}>
-        Dono: {item.owner_animal?.name || 'Dono não especificado'}
+      <Text style={styles.cardType}>
+        {item.type || ''}
       </Text>
-
-      {item.description && (
-        <Text style={styles.cardDescription}>
-          {item.description}
-        </Text>
-      )}
-
-      {item.team && item.team.length > 0 && (
-        <View style={styles.teamContainer}>
-          <Text style={styles.teamTitle}>Equipe:</Text>
-          {item.team.map((member, index) => (
-            <View key={`${item.id}-${member.member_id || index}`} style={styles.teamMember}>
-              <Text style={styles.teamMemberName}>
-                {member.name || 'Membro sem nome'}
-              </Text>
-              <Text style={styles.teamMemberType}>
-                ({member.member_type || 'Tipo não especificado'})
-              </Text>
-            </View>
-          ))}
-        </View>
-      )}
     </View>
-  );
+
+    <Text style={styles.cardTitle}>
+      {item.animal?.name || 'Animal não especificado'}
+    </Text>
+
+    <Text style={styles.cardOwner}>
+      Dono: {item.owner_animal?.name || 'Dono não especificado'}
+    </Text>
+
+    {item.description && (
+      <Text style={styles.cardDescription}>
+        {item.description}
+      </Text>
+    )}
+
+    {item.team && item.team.length > 0 && (
+      <View style={styles.teamContainer}>
+        <Text style={styles.teamTitle}>Equipe:</Text>
+        {item.team.map((member, index) => (
+          <View key={`${item.id}-${member.member_id || index}`} style={styles.teamMember}>
+            <Text style={styles.teamMemberName}>
+              {member.name || 'Membro sem nome'}
+            </Text>
+            <Text style={styles.teamMemberType}>
+              ({member.member_type || 'Tipo não especificado'})
+            </Text>
+          </View>
+        ))}
+      </View>
+    )}
+  </View>
+);
 
   const renderAnimalItem = ({ item }) => (
     <TouchableOpacity
@@ -516,7 +511,7 @@ const AppointmentScreen = () => {
         </ScrollView>
       </View>
 
-      {/* Appointments List */}
+
       {loading ? (
         <ActivityIndicator size="large" color="#e74c3c" style={styles.loader} />
       ) : (
@@ -544,7 +539,6 @@ const AppointmentScreen = () => {
         />
       )}
 
-      {/* Main Appointment Form Modal */}
       <Modal
         animationType="slide"
         transparent={false}
@@ -558,7 +552,7 @@ const AppointmentScreen = () => {
           >
             <ScrollView
               contentContainerStyle={styles.modalScrollContent}
-              keyboardShouldPersistTaps="handled" // Prevents keyboard dismissal when tapping FlatList items
+              keyboardShouldPersistTaps="handled"
             >
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Novo Agendamento</Text>
@@ -567,7 +561,7 @@ const AppointmentScreen = () => {
                 </TouchableOpacity>
               </View>
 
-              {/* Date Field */}
+         
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Data *</Text>
                 <TouchableOpacity
@@ -583,7 +577,6 @@ const AppointmentScreen = () => {
                 </TouchableOpacity>
               </View>
 
-              {/* Time Field */}
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Horário *</Text>
                 <TouchableOpacity

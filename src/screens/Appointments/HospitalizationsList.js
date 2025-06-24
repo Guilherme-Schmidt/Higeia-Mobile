@@ -37,8 +37,7 @@ const HospitalizationsList = ({ navigation }) => {
         onPress: async () => {
           try {
             setDischargingId(id);
-            await api.put(`/clinic/hospitalizations/${id}/discharge`, {}); // rota PUT /clinic/hospitalization/:id/discharge
-            await fetchHospitalizations();
+            await api.put(`/clinic/hospitalizations/${id}/discharge`, {}); 
             Alert.alert('Sucesso', 'Animal liberado com sucesso');
           } catch (error) {
             console.log('Erro ao liberar animal:', error.response ? error.response.data : error.message);

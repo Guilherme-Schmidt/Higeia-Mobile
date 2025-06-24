@@ -29,7 +29,7 @@ const HospitalizationDetailScreen = ({ route }) => {
   const fetchRecords = async () => {
     try {
       setLoading(true);
-      // CORREÇÃO: Usando o endpoint correto para hospitalização específica
+
       const response = await api.get(`/clinic/hospitalizations/${hospitalizationId}/records`);
       
       console.log('Dados recebidos:', response.data); // Para debug

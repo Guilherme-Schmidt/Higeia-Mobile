@@ -22,21 +22,27 @@ export default function RegisterProduct({navigation}) {
   const [form, setForm] = useState({
     name: '',
     amount: '',
-    barCode: '',
+    bar_code: '',
     controlled: false,
-    productCategory: '',
-    unit: '',
-    laboratory: '',
-    productUse: ''
+    product_category_id: '',
+    unit_id: '',
+    product_use_id: '',
+    laboratory_id: '',
+    min: '',
+    max: '',
+    alert: false,
+    batch_active: false,
+    posology: ''
   });
+  
   const [batches, setBatches] = useState([]);
   const [activePrinciples, setActivePrinciples] = useState([]);
   const [newActivePrinciple, setNewActivePrinciple] = useState('');
   const [newBatch, setNewBatch] = useState({
-    number: '',
+    batch: '',
     validity: '',
-    entryTotal: '',
-    outputTotal: ''
+    entry_total: '',
+    output_total: ''
   });
 
   const [dropdownData, setDropdownData] = useState({
@@ -78,25 +84,26 @@ export default function RegisterProduct({navigation}) {
   }
 
   const handleAddBatch = () => {
-    if (!newBatch.number || !newBatch.validity || !newBatch.entryTotal) {
+    if (!newBatch.batch || !newBatch.validity || !newBatch.entry_total) {
       Alert.alert('Atenção', 'Preencha os campos obrigatórios do lote');
       return;
     }
     
     const batch = {
-      batch: newBatch.number,
+      batch: newBatch.batch,
       validity: newBatch.validity,
-      entry_total: parseInt(newBatch.entryTotal),
-      output_total: parseInt(newBatch.outputTotal || '0'),
-      amount_total: parseInt(newBatch.entryTotal) - parseInt(newBatch.outputTotal || '0'),
+      product_id: 0,
+      entry_total: parseInt(newBatch.entry_total),
+      output_total: parseInt(newBatch.output_total || '0'),
+      amount_total: parseInt(newBatch.entry_total) - parseInt(newBatch.output_total || '0'),
     };
     
     setBatches([...batches, batch]);
     setNewBatch({
-      number: '',
+      batch: '',
       validity: '',
-      entryTotal: '',
-      outputTotal: ''
+      entry_total: '',
+      output_total: ''
     });
   };
 
@@ -127,11 +134,11 @@ export default function RegisterProduct({navigation}) {
     const requiredFields = [
       {field: 'name', label: 'Nome do produto'},
       {field: 'amount', label: 'Quantidade'},
-      {field: 'barCode', label: 'Código de barras'},
-      {field: 'productCategory', label: 'Categoria'},
-      {field: 'unit', label: 'Unidade'},
-      {field: 'laboratory', label: 'Laboratório'},
-      {field: 'productUse', label: 'Uso do produto'}
+      {field: 'bar_code', label: 'Código de barras'},
+      {field: 'product_category_id', label: 'Categoria'},
+      {field: 'unit_id', label: 'Unidade'},
+      {field: 'laboratory_id', label: 'Laboratório'},
+      {field: 'product_use_id', label: 'Uso do produto'}
     ];
 
     const missingField = requiredFields.find(f => !form[f.field]);
@@ -141,15 +148,19 @@ export default function RegisterProduct({navigation}) {
     }
 
     const payload = {
-      ...form,
-      product_category_id: form.productCategory,
+      name: form.name,
+      product_category_id: parseInt(form.product_category_id),
       amount: parseInt(form.amount),
-      unit_id: form.unit,
-      product_use_id: form.productUse,
+      unit_id: parseInt(form.unit_id),
+      product_use_id: parseInt(form.product_use_id),
       controlled: form.controlled ? 1 : 0,
-      laboratory_id: form.laboratory,
-      batch_active: batches.length > 0,
-      batchs: batches,
+      laboratory_id: parseInt(form.laboratory_id),
+      bar_code: form.bar_code,
+      batch_active: form.batch_active,
+      alert: form.alert,
+      min: form.min ? parseInt(form.min) : 0,
+      max: form.max ? parseInt(form.max) : 0,
+      batchs: form.batch_active ? batches : [],
       active_principle: activePrinciples,
     };
 
@@ -198,8 +209,6 @@ export default function RegisterProduct({navigation}) {
       <StatusBar backgroundColor="#e74c3c" barStyle="light-content" />
       
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-      
-
         {/* Formulário Principal */}
         <Text style={styles.sectionTitle}>Informações Básicas</Text>
         
@@ -222,8 +231,8 @@ export default function RegisterProduct({navigation}) {
           <TextInput
             style={[styles.input, {flex: 1}]}
             placeholder="Código de barras *"
-            value={form.barCode}
-            onChangeText={(text) => handleFormChange('barCode', text)}
+            value={form.bar_code}
+            onChangeText={(text) => handleFormChange('bar_code', text)}
             keyboardType="number-pad"
           />
         </View>
@@ -232,8 +241,8 @@ export default function RegisterProduct({navigation}) {
           <Text style={styles.label}>Categoria *</Text>
           <View style={styles.pickerContainer}>
             <Picker
-              selectedValue={form.productCategory}
-              onValueChange={(value) => handleFormChange('productCategory', value)}
+              selectedValue={form.product_category_id}
+              onValueChange={(value) => handleFormChange('product_category_id', value)}
             >
               <Picker.Item label="Selecione..." value="" />
               {dropdownData.categories.map(cat => (
@@ -248,8 +257,8 @@ export default function RegisterProduct({navigation}) {
             <Text style={styles.label}>Unidade *</Text>
             <View style={styles.pickerContainer}>
               <Picker
-                selectedValue={form.unit}
-                onValueChange={(value) => handleFormChange('unit', value)}
+                selectedValue={form.unit_id}
+                onValueChange={(value) => handleFormChange('unit_id', value)}
               >
                 <Picker.Item label="Selecione..." value="" />
                 {dropdownData.units.map(u => (
@@ -263,8 +272,8 @@ export default function RegisterProduct({navigation}) {
             <Text style={styles.label}>Laboratório *</Text>
             <View style={styles.pickerContainer}>
               <Picker
-                selectedValue={form.laboratory}
-                onValueChange={(value) => handleFormChange('laboratory', value)}
+                selectedValue={form.laboratory_id}
+                onValueChange={(value) => handleFormChange('laboratory_id', value)}
               >
                 <Picker.Item label="Selecione..." value="" />
                 {dropdownData.laboratories.map(lab => (
@@ -279,8 +288,8 @@ export default function RegisterProduct({navigation}) {
           <Text style={styles.label}>Uso do Produto *</Text>
           <View style={styles.pickerContainer}>
             <Picker
-              selectedValue={form.productUse}
-              onValueChange={(value) => handleFormChange('productUse', value)}
+              selectedValue={form.product_use_id}
+              onValueChange={(value) => handleFormChange('product_use_id', value)}
             >
               <Picker.Item label="Selecione..." value="" />
               {dropdownData.productUses.map(use => (
@@ -300,76 +309,132 @@ export default function RegisterProduct({navigation}) {
           />
         </View>
 
-        {/* Seção de Lotes */}
-        <Text style={styles.sectionTitle}>Lotes</Text>
+        {/* Seção de Alerta de Estoque */}
+        <Text style={styles.sectionTitle}>Alerta de Estoque</Text>
         
-        {batches.map((batch, index) => (
-          <View key={index} style={styles.listItem}>
-            <View style={styles.itemContent}>
-              <Text style={styles.itemTitle}>Lote: {batch.batch}</Text>
-              <Text style={styles.itemDetail}>Validade: {batch.validity}</Text>
-              <Text style={styles.itemDetail}>Quantidade: {batch.amount_total}</Text>
-            </View>
-            <TouchableOpacity 
-              style={styles.removeButton}
-              onPress={() => removeItem(batches, setBatches, index)}
-            >
-              <Icon name="trash-2" size={18} color="#e74c3c" />
-            </TouchableOpacity>
-          </View>
-        ))}
-
-        <View style={styles.row}>
-          <TextInput
-            style={[styles.input, {flex: 1, marginRight: 10}]}
-            placeholder="Número do Lote *"
-            value={newBatch.number}
-            onChangeText={(text) => setNewBatch({...newBatch, number: text})}
+        <View style={styles.switchContainer}>
+          <Text style={styles.label}>Ativar Alerta de Estoque Baixo</Text>
+          <Switch
+            value={form.alert}
+            onValueChange={(value) => handleFormChange('alert', value)}
+            trackColor={{false: '#767577', true: '#81b0ff'}}
+            thumbColor={form.alert ? '#f5dd4b' : '#f4f3f4'}
           />
-          <TouchableOpacity 
-            style={[styles.input, {flex: 1, justifyContent: 'center'}]}
-            onPress={() => setShowDatePicker(true)}
-          >
-            <Text style={newBatch.validity ? styles.inputText : styles.placeholderText}>
-              {newBatch.validity || 'Validade *'}
-            </Text>
-          </TouchableOpacity>
         </View>
 
-        {showDatePicker && (
-          <DateTimePicker
-            value={selectedDate}
-            mode="date"
-            display="default"
-            onChange={handleDateChange}
-            minimumDate={new Date()}
-          />
+        {form.alert && (
+          <View style={styles.row}>
+            <TextInput
+              style={[styles.input, {flex: 1, marginRight: 10}]}
+              placeholder="Quantidade mínima"
+              value={form.min}
+              onChangeText={(text) => handleFormChange('min', text)}
+              keyboardType="numeric"
+            />
+            <TextInput
+              style={[styles.input, {flex: 1}]}
+              placeholder="Quantidade máxima"
+              value={form.max}
+              onChangeText={(text) => handleFormChange('max', text)}
+              keyboardType="numeric"
+            />
+          </View>
         )}
 
-        <View style={styles.row}>
-          <TextInput
-            style={[styles.input, {flex: 1, marginRight: 10}]}
-            placeholder="Entrada Total *"
-            value={newBatch.entryTotal}
-            onChangeText={(text) => setNewBatch({...newBatch, entryTotal: text})}
-            keyboardType="numeric"
-          />
-          <TextInput
-            style={[styles.input, {flex: 1}]}
-            placeholder="Saída Total"
-            value={newBatch.outputTotal}
-            onChangeText={(text) => setNewBatch({...newBatch, outputTotal: text})}
-            keyboardType="numeric"
+        {/* Seção de Posologia */}
+        <Text style={styles.sectionTitle}>Posologia</Text>
+        <TextInput
+          style={[styles.input, {height: 80}]}
+          placeholder="Informações de posologia"
+          value={form.posology}
+          onChangeText={(text) => handleFormChange('posology', text)}
+          multiline
+        />
+
+        {/* Seção de Lotes */}
+        <View style={styles.switchContainer}>
+          <Text style={styles.label}>Ativar Controle por Lotes</Text>
+          <Switch
+            value={form.batch_active}
+            onValueChange={(value) => handleFormChange('batch_active', value)}
+            trackColor={{false: '#767577', true: '#81b0ff'}}
+            thumbColor={form.batch_active ? '#f5dd4b' : '#f4f3f4'}
           />
         </View>
 
-        <TouchableOpacity 
-          style={styles.secondaryButton}
-          onPress={handleAddBatch}
-        >
-          <Icon name="plus" size={18} color="#fff" />
-          <Text style={styles.secondaryButtonText}>Adicionar Lote</Text>
-        </TouchableOpacity>
+        {form.batch_active && (
+          <>
+            <Text style={styles.sectionTitle}>Lotes</Text>
+            
+            {batches.map((batch, index) => (
+              <View key={index} style={styles.listItem}>
+                <View style={styles.itemContent}>
+                  <Text style={styles.itemTitle}>Lote: {batch.batch}</Text>
+                  <Text style={styles.itemDetail}>Validade: {batch.validity}</Text>
+                  <Text style={styles.itemDetail}>Quantidade: {batch.amount_total}</Text>
+                </View>
+                <TouchableOpacity 
+                  style={styles.removeButton}
+                  onPress={() => removeItem(batches, setBatches, index)}
+                >
+                  <Icon name="trash-2" size={18} color="#e74c3c" />
+                </TouchableOpacity>
+              </View>
+            ))}
+
+            <View style={styles.row}>
+              <TextInput
+                style={[styles.input, {flex: 1, marginRight: 10}]}
+                placeholder="Número do Lote *"
+                value={newBatch.batch}
+                onChangeText={(text) => setNewBatch({...newBatch, batch: text})}
+              />
+              <TouchableOpacity 
+                style={[styles.input, {flex: 1, justifyContent: 'center'}]}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text style={newBatch.validity ? styles.inputText : styles.placeholderText}>
+                  {newBatch.validity || 'Validade *'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={selectedDate}
+                mode="date"
+                display="default"
+                onChange={handleDateChange}
+                minimumDate={new Date()}
+              />
+            )}
+
+            <View style={styles.row}>
+              <TextInput
+                style={[styles.input, {flex: 1, marginRight: 10}]}
+                placeholder="Entrada Total *"
+                value={newBatch.entry_total}
+                onChangeText={(text) => setNewBatch({...newBatch, entry_total: text})}
+                keyboardType="numeric"
+              />
+              <TextInput
+                style={[styles.input, {flex: 1}]}
+                placeholder="Saída Total"
+                value={newBatch.output_total}
+                onChangeText={(text) => setNewBatch({...newBatch, output_total: text})}
+                keyboardType="numeric"
+              />
+            </View>
+
+            <TouchableOpacity 
+              style={styles.secondaryButton}
+              onPress={handleAddBatch}
+            >
+              <Icon name="plus" size={18} color="#fff" />
+              <Text style={styles.secondaryButtonText}>Adicionar Lote</Text>
+            </TouchableOpacity>
+          </>
+        )}
 
         {/* Seção de Princípios Ativos */}
         <Text style={styles.sectionTitle}>Princípios Ativos</Text>
@@ -564,7 +629,7 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 15,
+    fontSize: 15,           
     marginLeft: 8,
   },
-});
+});           

@@ -162,10 +162,9 @@ export default function ProductEntry({navigation}) {
       <ScrollView contentContainerStyle={styles.scrollContainer}>
     
 
-        {/* Seção de Dados da Entrada */}
+
         <Text style={styles.sectionTitle}>Dados da Entrada</Text>
-        
-        {/* DatePicker Padronizado */}
+ 
         <Text style={styles.label}>Data de Entrada *</Text>
         <TouchableOpacity
           style={styles.dateInput}
@@ -210,7 +209,6 @@ export default function ProductEntry({navigation}) {
           onChangeText={(text) => handleFormChange('document', text)}
         />
 
-        {/* Seção de Produtos */}
         <Text style={styles.sectionTitle}>Produtos</Text>
         
         <View style={styles.pickerGroup}>
@@ -259,7 +257,6 @@ export default function ProductEntry({navigation}) {
           <Text style={styles.addButtonText}>Adicionar Produto</Text>
         </TouchableOpacity>
 
-        {/* Lista de Produtos Adicionados */}
         {entries.map((entry, index) => (
           <View key={index} style={styles.entryItem}>
             <View style={styles.entryContent}>
@@ -281,7 +278,6 @@ export default function ProductEntry({navigation}) {
           </View>
         ))}
 
-        {/* Total */}
         {entries.length > 0 && (
           <View style={styles.totalContainer}>
             <Text style={styles.totalLabel}>Total:</Text>
@@ -289,7 +285,7 @@ export default function ProductEntry({navigation}) {
           </View>
         )}
 
-        {/* Botão Salvar */}
+        {/* Botão  */}
         <TouchableOpacity
           style={styles.saveButton}
           onPress={handleSave}

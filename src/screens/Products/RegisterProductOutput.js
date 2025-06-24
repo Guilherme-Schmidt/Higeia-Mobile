@@ -15,48 +15,42 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import api from '../../api/api';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useNavigation } from '@react-navigation/native';
 
 const RegisterProductOutput = () => {
-  // Estados principais
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [animals, setAnimals] = useState([]);
-  
-  // Estados do formulário
+
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     animal_id: null,
     withdrawn_by_id: null,
     total: 0,
   });
-  
-  // Estados para busca e seleção
+  const navigation = useNavigation();
   const [searchQuery, setSearchQuery] = useState('');
   const [showProductModal, setShowProductModal] = useState(false);
   const [currentProduct, setCurrentProduct] = useState(null);
   const [productAmount, setProductAmount] = useState('');
+  const [productBatch, setProductBatch] = useState('');
+  const [unitId, setUnitId] = useState(null);
 
-  // Carrega dados iniciais
   useEffect(() => {
     const loadInitialData = async () => {
       try {
         setLoading(true);
-        
-        // Carrega produtos
+
         const productsRes = await api.get('/pharmacy/product');
         setProducts(productsRes.data.items || []);
-  
-        
-        // Carrega funcionários
+
         const employeesRes = await api.get('/reg/employee');
         setEmployees(employeesRes.data.items || []);
-        
-        // // Carrega animais (se aplicável)
-         const response = await api.get('/reg/animal');
+
+        const response = await api.get('/reg/animal');
         setAnimals(response.data.items || response.data || []);
-        
       } catch (error) {
         console.error('Erro ao carregar dados:', error);
         Alert.alert('Erro', 'Não foi possível carregar os dados iniciais');
@@ -64,82 +58,97 @@ const RegisterProductOutput = () => {
         setLoading(false);
       }
     };
-    
+
     loadInitialData();
   }, []);
 
-  // Adiciona produto à lista de selecionados
   const handleAddProduct = () => {
-    if (!currentProduct || !productAmount || isNaN(productAmount) || Number(productAmount) <= 0) {
-      Alert.alert('Atenção', 'Selecione um produto e informe uma quantidade válida');
+    if (!currentProduct || !productAmount || isNaN(productAmount) || Number(productAmount) <= 0 || !productBatch || !unitId) {
+      Alert.alert('Atenção', 'Preencha todos os campos do produto corretamente');
       return;
     }
 
     const newProduct = {
       product_id: currentProduct.id,
       amount: Number(productAmount),
-      product: currentProduct, // Mantemos a referência para exibição
+      batch: productBatch,
+      unit_id: unitId,
+      product: currentProduct,
     };
 
     setSelectedProducts([...selectedProducts, newProduct]);
     setCurrentProduct(null);
     setProductAmount('');
+    setProductBatch('');
+    setUnitId(null);
     setShowProductModal(false);
   };
 
-  // Remove produto da lista
   const handleRemoveProduct = (productId) => {
     setSelectedProducts(selectedProducts.filter(p => p.product_id !== productId));
   };
 
-  // Submete o formulário
   const handleSubmit = async () => {
     if (!formData.withdrawn_by_id || selectedProducts.length === 0) {
-      Alert.alert('Atenção', 'Preencha todos os campos obrigatórios e adicione pelo menos um produto');
+      Alert.alert('Atenção', 'Preencha todos os campos obrigatórios');
       return;
     }
 
     try {
       setLoading(true);
-      
+
       const payload = {
-        ...formData,
+        date: formData.date,
+        withdrawn_by_id: formData.withdrawn_by_id,
+        animal_id: formData.animal_id || null,
         products: selectedProducts.map(p => ({
           product_id: p.product_id,
           amount: p.amount,
-          // Adicione outros campos necessários como unit_id, batch, etc.
-        })),
+          unit_id: p.unit_id,
+          batch: p.batch,
+        }))
       };
 
-      const response = await api.post('/pharmacy/product-output', payload);
-      
+      const response = await api.post('/pharmacy/output', payload);
+
       if (response.data.status === 'success') {
-        Alert.alert('Sucesso', 'Saída de produtos registrada com sucesso');
-        // Limpa o formulário após sucesso
+        Alert.alert('Sucesso', 'Saída registrada!');
         setSelectedProducts([]);
         setFormData({
-          ...formData,
+          date: new Date().toISOString().split('T')[0],
           animal_id: null,
-          total: 0,
+          withdrawn_by_id: null,
+          total: 0
         });
-      } else {
-        throw new Error(response.data.message || 'Erro ao registrar saída');
       }
     } catch (error) {
-      console.error('Erro ao registrar saída:', error);
-      Alert.alert('Erro', 'Não foi possível registrar a saída de produtos');
+      console.error('Erro detalhado:', error);
+      Alert.alert(
+        'Erro',
+        error.response?.data?.message ||
+        'Falha na comunicação com o servidor'
+      );
     } finally {
       setLoading(false);
     }
+    if (response.data.status === 'success') {
+    Alert.alert('Sucesso', 'Saída registrada!');
+    setSelectedProducts([]);
+    setFormData({
+      date: new Date().toISOString().split('T')[0],
+      animal_id: null,
+      withdrawn_by_id: null,
+      total: 0
+    });
+    navigation.goBack(); // Volta para a tela anterior
+}
   };
 
-  // Renderização do item do produto
   const renderProductItem = ({ item }) => (
     <TouchableOpacity 
       style={styles.productItem}
       onPress={() => {
         setCurrentProduct(item);
-        setShowProductModal(true);
       }}
     >
       <Text style={styles.productName}>{item.name}</Text>
@@ -147,7 +156,6 @@ const RegisterProductOutput = () => {
     </TouchableOpacity>
   );
 
-  // Renderização do produto selecionado
   const renderSelectedProduct = (product) => (
     <View style={styles.selectedProductItem} key={product.product_id}>
       <View style={styles.selectedProductInfo}>
@@ -175,8 +183,7 @@ const RegisterProductOutput = () => {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <Text style={styles.title}>Registro de Saída de Produtos</Text>
-        
-        {/* Formulário principal */}
+
         <View style={styles.formGroup}>
           <Text style={styles.label}>Data</Text>
           <TextInput
@@ -186,7 +193,6 @@ const RegisterProductOutput = () => {
             placeholder="Data da saída"
           />
         </View>
-
 
         <View style={styles.formGroup}>
           <Text style={styles.label}>Responsável pela Retirada*</Text>
@@ -228,7 +234,6 @@ const RegisterProductOutput = () => {
           </View>
         </View>
 
-        {/* Lista de produtos selecionados */}
         <Text style={styles.sectionTitle}>Produtos para Saída</Text>
         {selectedProducts.length > 0 ? (
           <View style={styles.selectedProductsContainer}>
@@ -238,7 +243,6 @@ const RegisterProductOutput = () => {
           <Text style={styles.emptyText}>Nenhum produto selecionado</Text>
         )}
 
-        {/* Botão para adicionar produtos */}
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => setShowProductModal(true)}
@@ -246,7 +250,6 @@ const RegisterProductOutput = () => {
           <Text style={styles.addButtonText}>Adicionar Produtos</Text>
         </TouchableOpacity>
 
-        {/* Botão de submeter */}
         <TouchableOpacity
           style={styles.submitButton}
           onPress={handleSubmit}
@@ -259,7 +262,6 @@ const RegisterProductOutput = () => {
           )}
         </TouchableOpacity>
 
-        {/* Modal de seleção de produtos */}
         <Modal
           visible={showProductModal}
           animationType="slide"
@@ -301,6 +303,19 @@ const RegisterProductOutput = () => {
                   placeholder="Quantidade"
                   value={productAmount}
                   onChangeText={setProductAmount}
+                  keyboardType="numeric"
+                />
+                <TextInput
+                  style={styles.amountInput}
+                  placeholder="Lote"
+                  value={productBatch}
+                  onChangeText={setProductBatch}
+                />
+                <TextInput
+                  style={styles.amountInput}
+                  placeholder="ID da unidade"
+                  value={unitId}
+                  onChangeText={setUnitId}
                   keyboardType="numeric"
                 />
                 <TouchableOpacity

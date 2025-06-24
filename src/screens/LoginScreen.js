@@ -36,7 +36,6 @@ const LoginScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <View style={styles.card}>
-        {/* Ícone de pata adicionado aqui */}
         <Icon name="paw" size={50} color="#4CAF50" style={styles.pawIcon} />
         
         <Text style={styles.title}>IFC Login</Text>

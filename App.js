@@ -32,6 +32,7 @@ import HospitalizationDetailScreen from './src/screens/Appointments/Hospitalizat
 import AddHospitalizationRecordScreen from './src/screens/Appointments/AddHospitalizationRecordScreen';
 import RecordDetailScreen from './src/screens/Appointments/RecordDetailScreen';
 import RegisterProductOutput from './src/screens/Products/RegisterProductOutput';
+import ListProductOutput from './src/screens/Products/ProductOutputList';
 
 const Stack = createStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -55,6 +56,8 @@ const ProdutosNavigator = () => (
     <Stack.Screen name="DashboardStock" component={DashboardStock} />
     <Stack.Screen name="ListLowStock" component={ListLowStock} />
     <Stack.Screen name="SaidaProduto" component={RegisterProductOutput} />
+    <Stack.Screen name="ListProductOutput" component={ListProductOutput} />
+
   </Stack.Navigator>
 );
 
@@ -251,8 +254,10 @@ const CustomDrawerContent = ({ navigation, ...props }) => {
         { label: 'Cadastrar Produto', icon: 'plus-circle', screen: 'Produtos', route: 'CadastrarProduto' },
         { label: 'Entrada de Produtos', icon: 'box-open', screen: 'Produtos', route: 'EntradaProduto' },
         { label: 'Saída de Produtos', icon: 'sign-out-alt', screen: 'Produtos', route: 'SaidaProduto' },
+        { label: 'Saídas Registradas', icon: 'clipboard-list', screen: 'Produtos', route: 'ListProductOutput' }, // Novo item
       ],
     },
+
     {
       title: 'Clínica',
       icon: 'clinic-medical',
